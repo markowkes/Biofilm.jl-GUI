@@ -1,0 +1,22 @@
+name: Debug
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: '1.8'
+          julia-arch: x86
+      #- uses: julia-actions/julia-buildpkg@v1
+      
+      # Run commands using the runners shell
+      - name: PWD
+        run: pwd
+      - name: JuliaBugReport
+        run: JULIA_RR_RECORD_ARGS=-n julia --bug-report=rr test/Case1.jl
