@@ -1,395 +1,172 @@
-#testing custom tkinter
-#Classes:
+import os
+import subprocess
+import tkinter as tk
+from tkinter import filedialog
+
+import customtkinter
+import matplotlib
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 import ParticulateObjectFrame
 import ScrollableObjectFrame
 import SoluteObjectFrame
-#Packages:
-import os
-import customtkinter
-import tkinter
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from tkinter import filedialog
-import subprocess
-
-customtkinter.set_appearance_mode("System")  # Modes: system (default), light, dark
-customtkinter.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
-root = customtkinter.CTk()  # create CTk window
-matplotlib.use("TkAgg")
-root.title = "Biofilm.py"
-
-height = root.winfo_screenheight()
-width = root.winfo_screenwidth()
-root.geometry("%dx%d+0+0" % (width, height-80))
-root.update()
-
-#variables, used for saving to file:
-global params
-params = {}
-params["title"] = customtkinter.StringVar(value='')
-params["run_time"] = customtkinter.StringVar(value='')
-params["tolerance"] = customtkinter.StringVar(value='')
-params["output_period"] = customtkinter.StringVar(value='')
-params["volume"] = customtkinter.StringVar(value='')
-params["surface_area"] = customtkinter.StringVar(value='')
-params["flowrate"] = customtkinter.StringVar(value='')
-params["gridpoints"] = customtkinter.StringVar(value='')
-params["initial_thickness"] = customtkinter.StringVar(value='')
-params["layer_thickness"] = customtkinter.StringVar(value='')
-params["file_path"] = ''
-
-
-
-
-def clearParameterFrame():
-    simulation_frame.grid_forget()
-    geometry_frame.grid_forget()
-    particulate_frame.grid_forget()
-    solute_frame.grid_forget()
-
-##Functions to define layouts of different menu options' frames
-def initSimulationFrame():
-    #Simulation Parameters:
-    global simulation_frame
-    global params
-    sim_parameters = customtkinter.CTkLabel(simulation_frame, text = "Simulation Parameters:")
-    sim_parameters.grid(row = 0, column = 0)
-
-    #Title:
-    sp_title = customtkinter.CTkLabel(simulation_frame, text = "Title: ").grid(row = 1, column = 0)
-    sp_title_entry = customtkinter.CTkEntry(simulation_frame, textvariable=params["title"]).grid(row = 1, column = 1, pady = 3)
-
-    #Simulation Run Time:
-    sp_sim_time = customtkinter.CTkLabel(simulation_frame, text = "Simulation Time (days): ").grid(row = 2, column = 0)
-    sp_sim_time_entry = customtkinter.CTkEntry(simulation_frame, textvariable=params["run_time"])
-    sp_sim_time_entry.grid(row = 2, column = 1, pady = 3)
-    sp_sim_time_entry.insert(0, "1")
-
-    #Tolerance:
-    sp_tolerance = customtkinter.CTkLabel(simulation_frame, text = "Tolerance: ").grid(row = 3, column = 0)
-    sp_tolerance_entry = customtkinter.CTkEntry(simulation_frame, textvariable=params["tolerance"])
-    sp_tolerance_entry.grid(row = 3, column = 1, pady = 3)
-    sp_tolerance_entry.insert(0, "1e-4")
-
-    #output time step
-    sp_output_period = customtkinter.CTkLabel(simulation_frame, text = "Output period (days): ").grid(row = 4, column = 0)
-    sp_output_period_entry = customtkinter.CTkEntry(simulation_frame, textvariable=params["output_period"])
-    sp_output_period_entry.grid(row = 4, column = 1, pady = 3)
-    sp_output_period_entry.insert(0, "0.1")
-
-def initGeometryFrame():
-    global params
-    global geometry_frame
-    geometry_parameters = customtkinter.CTkLabel(geometry_frame, text = "Tank Parameters:")
-    geometry_parameters.grid(row = 0, column = 0, columnspan = 2)
-
-    #Volume:
-    volume_label = customtkinter.CTkLabel(geometry_frame, text = "Volume (cubic meters): ").grid(row = 1, column = 0)
-    volume_entry = customtkinter.CTkEntry(geometry_frame, textvariable=params["volume"])
-    volume_entry.grid(row = 1, column = 1, pady = 3)
-    volume_entry.insert(0, "0")
-
-    #Surface Area:
-    surface_area_label = customtkinter.CTkLabel(geometry_frame, text = "Surface area of biofilm (square meters)").grid(row = 2, column = 0)
-    surface_area_entry = customtkinter.CTkEntry(geometry_frame, textvariable=params["surface_area"])
-    surface_area_entry.grid(row = 2, column = 1, pady = 3)
-    surface_area_entry.insert(0, "0")
-
-    #Flowrate:
-    flowrate_label = customtkinter.CTkLabel(geometry_frame, text = "Flowrate through tank (cubic meters/day)").grid(row = 3, column = 0, padx = 8)
-    flowrate_entry = customtkinter.CTkEntry(geometry_frame, textvariable=params["flowrate"])
-    flowrate_entry.grid(row = 3, column = 1, pady = 3)
-    flowrate_entry.insert(0, "0")
-
-    #Biofilm Parameters:
-    spacer = customtkinter.CTkLabel(geometry_frame, text="", height = 0).grid(row = 4, column = 0)
-    biofilm_parameters = customtkinter.CTkLabel(geometry_frame, text = "Biofilm Parameters:")
-    biofilm_parameters.grid(row = 5, column = 0, columnspan = 2)
-
-    #Number of Gridpoints:
-    gridpoints_label = customtkinter.CTkLabel(geometry_frame, text = "Number of gridpoints in biofilm").grid(row = 6, column = 0) #must be an int
-    gridpoints_entry = customtkinter.CTkEntry(geometry_frame, textvariable=params["gridpoints"])
-    gridpoints_entry.grid(row = 6, column = 1, pady = 3)
-    gridpoints_entry.insert(0, "0")
-
-    #Biofilm Initial Thickness
-    initial_thickness_label = customtkinter.CTkLabel(geometry_frame, text = "Biofolm inital thickness (meters)").grid(row = 7, column = 0)
-    initial_thickness_entry = customtkinter.CTkEntry(geometry_frame, textvariable=params["initial_thickness"])
-    initial_thickness_entry.grid(row = 7, column = 1, pady = 3)
-    initial_thickness_entry.insert(0, "0")
-
-    #Boundary Layer Thickness
-    boundary_thickness_label = customtkinter.CTkLabel(geometry_frame, text = "Boundary layer thickness (meters)").grid(row = 8, column = 0)
-    boundary_thickness_entry = customtkinter.CTkEntry(geometry_frame, textvariable=params["layer_thickness"])
-    boundary_thickness_entry.grid(row = 8, column = 1, pady = 3)
-    boundary_thickness_entry.insert(0, "0")
-
-def initParticulateFrame():
-    global particulate_frame
-    global particulates_arr
-    ParticulateSOF = ScrollableObjectFrame.ScrollableObjectFrame(particulate_frame, particulates_arr, False, height = height-20, width = ((4*width)/5)-50)
-    ParticulateSOF.grid(row = 0, column = 0)
-    #add_particulate_button = customtkinter.CTkButton(particulate_frame, text = "Add New Particulate", command = addNewParticulate)
-    #add_particulate_button.grid(row = 0, column = 0, pady = 10)
-
-def initSoluteFrame():
-    global solute_frame
-    global solutes_arr
-    SoluteSOF = ScrollableObjectFrame.ScrollableObjectFrame(solute_frame, solutes_arr, True, height = height-20, width = ((4*width)/5)-50)
-    SoluteSOF.grid(row = 0, column = 0)
-
-##Functions called by menu buttons:
-def simulationButtonFunc():
-    global parameter_frame
-    global simulation_frame
-    global geometry_frame
-    clearParameterFrame()
-    simulation_frame.grid(row = 0, column = 0, pady = 5, padx = 5) 
-
-def geometryButtonFunc():
-    global parameter_frame
-    global simulation_frame
-    clearParameterFrame()
-    geometry_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3) 
-
-def partuculateButtonFunc():
-    global particulate_frame
-    clearParameterFrame()
-    particulate_frame.grid(row = 0, column = 0, pady = 5, padx = 5)
-
-def soluteButtonFunc():
-    global solute_frame
-    clearParameterFrame()
-    solute_frame.grid(row = 0, column = 0, pady = 5, padx = 5)
-
-def reaction_button_func():
-    pass
-
-
-
-def addNewParticulate():
-    global particulate_count
-    particulate_count += 1
-    root.update()
-
-def addNewSolute():
-    global solutes_count
-    solutes_count += 1
-    root.update()
-
-def run_julia_script():
-    global params
-    print(params["file_path"])
-    try:
-        # Run the Julia script as a subprocess
-        subprocess.run(['julia', params["file_path"]], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error running Julia script: {e}")    
-
-
-##Menu:
-menu_frame = customtkinter.CTkFrame(root, width = width/5, height= height - 40)
-menu_frame.grid(row = 0, column = 0, pady = 5, ipady = 40, padx = 5, sticky = "N")
-menu_frame.grid_propagate(0) 
-
-spacer = customtkinter.CTkLabel(menu_frame, text="", height = 0).grid(row = 0, column = 0)
-
-simulation_button = customtkinter.CTkButton(menu_frame, text = "Simulation Parameters", width = (width/5)-20, command=simulationButtonFunc)
-simulation_button.grid(row = 1, column = 0, pady = 5, padx = 10)
-
-geometry_button = customtkinter.CTkButton(menu_frame, text = "Geometry Parameters", width = (width/5)-20, command = geometryButtonFunc)
-geometry_button.grid(row = 2, column = 0, pady = 5, padx = 10)
-
-particulate_button = customtkinter.CTkButton(menu_frame, text = "Particulate Parameters", width = (width/5)-20, command = partuculateButtonFunc)
-particulate_button.grid(row = 3, column = 0, pady = 5, padx = 10)
-
-solute_button = customtkinter.CTkButton(menu_frame, text = "Solute Parameters", width = (width/5)-20, command = soluteButtonFunc)
-solute_button.grid(row = 4, column = 0, pady = 5, padx = 10 )
-
-reaction_button = customtkinter.CTkButton(menu_frame, text = "Reactions", width = (width/5)-20, command = reaction_button_func)
-reaction_button.grid(row = 5, column = 0, pady = 5, padx = 10)
-
-run_button = customtkinter.CTkButton(menu_frame, text = "Run Simulation", width = (width/5)-20, command= run_julia_script)  #should this prompt user to save?
-run_button.grid(row = 6, column = 0, pady = 50, padx = 10, sticky = "s")
-
-##Parameter Entry Section:
-parameter_frame = customtkinter.CTkFrame(root, height = height, width = ((4*width)/5)-26)
-parameter_frame.grid(row = 0, column = 1, pady = 5, padx = 5, sticky = "N")
-parameter_frame.grid_propagate(0)
-
-global particulates_arr
-particulates_arr = []
-particulate_count = 0
-global solutes_arr
-solutes_arr = []
-solutes_count = 0
-
-##Defining frame variables for menu option frames:
-simulation_frame = customtkinter.CTkFrame(parameter_frame, height = height, width = ((4*width)/5)-60)
-initSimulationFrame()
-geometry_frame = customtkinter.CTkFrame(parameter_frame, height = height, width = ((4*width)/5)-60)
-initGeometryFrame()
-particulate_frame = customtkinter.CTkFrame(parameter_frame, height = height, width = ((4*width)/5)-60)
-#particulate_tabs = customtkinter.CTkTabview(particulate_frame, anchor = "w", width = ((4*width)/5)-60)
-initParticulateFrame()
-solute_frame = customtkinter.CTkFrame(parameter_frame, height = height, width = ((4*width)/5)-60)
-#solute_tabs = customtkinter.CTkTabview(solute_frame, anchor = "w", width = ((4*width)/5)-60)
-initSoluteFrame()
-
-def getFrameParams(object_arr):
-    param_list = []
-    for frame in object_arr:
-        temp = list(frame.getParams().values()) #get the params dictionary from the frame, get its values, convert dict_values object to list
-        for index in range(len(temp)):
-            if len(param_list) <= index :
-               param_list.append([]) #append empty list
-            param_list[index].append(temp[index])
-    return param_list
-
-#The following 2 funcitons take lists of parameters and format them with commas between them for the save file.
-def buildStringParams(list):
-        name_string = ""
-        for name in list:
-            name_string = name_string + '\"' + name + '\", ' #put quotes around strings
-        name_string = name_string[:-2] #trim off trailing ', '
-        return name_string
-
-def buildFloatParams(list):
-        name_string = ""
-        for name in list:
-            name_string = name_string + str(name) + ', '
-        name_string = name_string[:-2] #trim off trailing ', '
-        return name_string
-
-
-def makeSaveFileContent():
-    global params
-    content = "using Biofilm \n \n #input parameters \n mumax = 20; KM = 3; \n"
-    content = content + """p = (
-        # --------------------- #
-        # Simulation Parameters #
-        # --------------------- #\n"""
-    sim_param_string = """\t\t Title = \t \"{}\",
-    \t tFinal = \t {},    #Simulation time [days]
-    \t tol = \t {},   #Tolerance
-    \t outPeriod = \t {}, # Time between outputs [days]\n"""
-    content = content + sim_param_string.format(params["title"].get(), params["run_time"].get(), params["tolerance"].get(), params["output_period"].get())
-    
-    content = content + """
-        # ---------------------- #
-        # Particulate Parameters #
-        # ---------------------- #\n"""
-    particulate_params = getFrameParams(particulates_arr)
-    particulate_param_string = """
-        XNames =[{}],\t\t# Particulate names
-        Xto =   [{}],\t\t# Tank particulate concentration initial condition(s)
-        Pbo =   [{}],\t\t# Biofilm particulates volume fraction initial condition(s) 
-        rho =   [{}],\t\t# Particulate densities
-        Kdet =  20000.0,\t\t# Particulates detachment coefficient
-        srcX =  [(S,X,Lf,t,z,p) -> 0.0],\t\t# Source of particulates
-        mu = [(S,X,Lf,t,z,p) -> (mumax * S[1]) ./ (KM .+ S[1])],\n"""
-    content = content + particulate_param_string.format(buildStringParams(particulate_params[0]), buildFloatParams(particulate_params[1]), buildFloatParams(particulate_params[2]), buildFloatParams(particulate_params[3]), buildFloatParams(particulate_params[4]))
-
-    content = content + """
-        # ----------------- #
-        # Solute Parameters #
-        # ----------------- #\n"""
-    solute_params = getFrameParams(solutes_arr)
-    solute_param_string = """
-        SNames =[{}],\t\t# Solute names
-        Sin =   [(t) -> 100],\t\t# Solute inflow (can be function of time)
-        Sto =   [{}],\t\t# Tank solute concentration initial condition(s)
-        Sbo =   [{}],\t\t# Biofilm solutes concentration initial condition(s)
-        Yxs =   [0],\t\t# Biomass yield coefficient on solute   #this should come from the reaction menu
-        Dt =    [{}],\t\t# Aquious solute diffusion through tank fluid
-        Db =    [{}],\t\t# Effective solute diffusion through biofilm
-        srcS =  [(S,X,Lf,t,z,p) -> 0.0],     # Source of solutes\n"""
-
-    
-    content = content + solute_param_string.format(buildStringParams(solute_params[0]), buildFloatParams(solute_params[1]), buildFloatParams(solute_params[2]), buildFloatParams(solute_params[3]), buildFloatParams(solute_params[4]))
-
-    content = content + """
-        # --------------- #
-        # Tank Parameters #
-        # --------------- #\n"""
-    tank_param_string = """\t\t V =\t{},\t#Volume of tank[m^3]
-    \t A =\t{},\t#Surface area of biofilm [m^2]
-    \t Q =\t{},\t#Flowrate through tank [m^3/d]\n"""
-    content = content + tank_param_string.format(params["volume"].get(), params["surface_area"].get(), params["flowrate"].get(), params["gridpoints"].get(), params["initial_thickness"].get(), params["layer_thickness"].get())
-    content = content + """\t\t# ------------------ #
-        # Biofilm Parameters #
-        # ------------------ #\n"""
-    biofilm_param_string = """\t\tNz = {},          # Number of grid points in biofilm
-        Lfo = {},     # Biofilm initial thickness [m]
-        LL = {},      # Boundary layer thickness [m]\n"""
-    content = content + biofilm_param_string.format(params["gridpoints"].get(), params["initial_thickness"].get(), params["layer_thickness"].get())
-    content = content + """\t)
-
-    
-
-    t,zm,Xt,St,Pb,Sb,Lf,sol = BiofilmSolver(p) # Run solver
-    biofilm_plot(sol,p) # Plot final results"""
-    return content
-
-
-def saveAs():
-    global params
-    content = makeSaveFileContent()
-    current_dir = os.path.dirname(__file__)
-    file_path = filedialog.asksaveasfilename( initialdir= current_dir+'../Saves',
-                                              defaultextension=".jl",
-                                              filetypes=[("Julia file", "*.jl")])
-
-    # Check if a file path was selected
-    if file_path:
-        with open(file_path, 'w') as f:
-            f.write(content)
-            params["file_path"] = file_path
-
-
-#Code copied for top menu bar:
-from tkinter import *
-def donothing():
-   filewin = Toplevel(root)
-   button = Button(filewin, text="Do nothing button")
-   button.pack()
-
-menubar = Menu(root)
-filemenu = Menu(menubar, tearoff=0)
-filemenu.add_command(label="New", command=donothing)
-filemenu.add_command(label="Open", command=donothing)
-filemenu.add_command(label="Save", command=donothing)
-filemenu.add_command(label="Save as...", command=saveAs)
-filemenu.add_command(label="Close", command=donothing)
-
-filemenu.add_separator()
-filemenu.add_command(label="Exit", command=root.quit)
-menubar.add_cascade(label="File", menu=filemenu)
-editmenu = Menu(menubar, tearoff=0)
-editmenu.add_command(label="Undo", command=donothing)
-editmenu.add_separator()
-editmenu.add_command(label="Cut", command=donothing)
-editmenu.add_command(label="Copy", command=donothing)
-editmenu.add_command(label="Paste", command=donothing)
-editmenu.add_command(label="Delete", command=donothing)
-editmenu.add_command(label="Select All", command=donothing)
-
-menubar.add_cascade(label="Edit", menu=editmenu)
-helpmenu = Menu(menubar, tearoff=0)
-helpmenu.add_command(label="Help Index", command=donothing)
-helpmenu.add_command(label="About...", command=donothing)
-menubar.add_cascade(label="Help", menu=helpmenu)
-
-root.config(menu=menubar)
-#End copied code
-
-
-def quitting(event):
-    customtkinter.CTk.quit(root)
-
-root.bind('<Destroy>', quitting)
-
-#root.bind('<Return>', graph)
-root.mainloop()
 
+
+class BiofilmApp:
+    def __init__(self):
+        self.root = customtkinter.CTk()
+        self.set_up_window()
+        self.params = self.initialize_parameters()
+        self.particulates_arr = []
+        self.solutes_arr = []
+        self.particulate_count = 0
+        self.solutes_count = 0
+
+        self.create_menu()
+        self.create_parameter_frame()
+        self.create_frames(parameter_frame=self.parameter_frame)
+        self.bind_events()
+
+    def set_up_window(self):
+        customtkinter.set_appearance_mode("System")
+        customtkinter.set_default_color_theme("blue")
+        self.root.title("Biofilm.py")
+        height = self.root.winfo_screenheight()
+        width = self.root.winfo_screenwidth()
+        self.root.geometry("%dx%d+0+0" % (width, height - 80))
+        self.root.update()
+
+    def initialize_parameters(self):
+        params = {
+            "title": customtkinter.StringVar(value=""),
+            "run_time": customtkinter.StringVar(value="1"),
+            "tolerance": customtkinter.StringVar(value="1e-4"),
+            "output_period": customtkinter.StringVar(value="0.1"),
+            "volume": customtkinter.StringVar(value="0"),
+            "surface_area": customtkinter.StringVar(value="0"),
+            "flowrate": customtkinter.StringVar(value="0"),
+            "gridpoints": customtkinter.StringVar(value="0"),
+            "initial_thickness": customtkinter.StringVar(value="0"),
+            "layer_thickness": customtkinter.StringVar(value="0"),
+            "file_path": ""
+        }
+        return params
+
+    def do_nothing():
+        pass
+
+    def create_menu(self):
+        menu_frame = customtkinter.CTkFrame(self.root, width=self.root.winfo_screenwidth() / 5, height=self.root.winfo_screenheight() - 40)
+        menu_frame.grid(row=0, column=0, pady=5, ipady=40, padx=5, sticky="N")
+        menu_frame.grid_propagate(0)
+
+        customtkinter.CTkButton(menu_frame, text="Simulation Parameters", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.simulation_button_func).grid(row=1, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Geometry Parameters", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.geometry_button_func).grid(row=2, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Particulate Parameters", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.particulate_button_func).grid(row=3, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Solute Parameters", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.solute_button_func).grid(row=4, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Reactions", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.reaction_button_func).grid(row=5, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Run Simulation", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.run_julia_script).grid(row=6, column=0, pady=50, padx=10, sticky="s")
+
+        menubar = tk.Menu(self.root)
+        filemenu = tk.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="New", command=self.do_nothing)
+        filemenu.add_command(label="Open", command=self.do_nothing)
+        filemenu.add_command(label="Save", command=self.do_nothing)
+        filemenu.add_command(label="Save as...", command=self.save_as)
+        filemenu.add_command(label="Close", command=self.do_nothing)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=self.root.quit)
+        menubar.add_cascade(label="File", menu=filemenu)
+        self.root.config(menu=menubar)
+
+    def create_parameter_frame(self):
+        self.parameter_frame = customtkinter.CTkFrame(self.root, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 26)
+        self.parameter_frame.grid(row=0, column=1, pady=5, padx=5, sticky="N")
+        self.parameter_frame.grid_propagate(0)
+
+    def create_frames(self, parameter_frame):
+        self.simulation_frame = customtkinter.CTkFrame(parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
+        self.init_simulation_frame()
+        self.geometry_frame = customtkinter.CTkFrame(parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
+        self.init_geometry_frame()
+        self.particulate_frame = customtkinter.CTkFrame(parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
+        self.init_particulate_frame()
+        self.solute_frame = customtkinter.CTkFrame(parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
+        self.init_solute_frame()
+
+    def save_as(self):
+        content = self.make_save_file_content()
+        current_dir = os.path.dirname(__file__)
+        file_path = filedialog.asksaveasfilename(initialdir=current_dir + '../Saves',
+                                                  defaultextension=".jl",
+                                                  filetypes=[("Julia file", "*.jl")])
+
+        if file_path:
+            with open(file_path, 'w') as f:
+                f.write(content)
+                self.params["file_path"] = file_path
+
+    def bind_events(self):
+        self.root.bind('<Destroy>', self.quitting)
+
+    def init_simulation_frame(self):
+        # Initialization code for simulation frame
+        pass
+
+    def init_geometry_frame(self):
+        # Initialization code for geometry frame
+        pass
+
+    def init_particulate_frame(self):
+        # Initialization code for particulate frame
+        pass
+
+    def init_solute_frame(self):
+        # Initialization code for solute frame
+        pass
+
+    def simulation_button_func(self):
+        # Event handler for simulation button
+        pass
+
+    def geometry_button_func(self):
+        # Event handler for geometry button
+        pass
+
+    def particulate_button_func(self):
+        # Event handler for particulate button
+        pass
+
+    def solute_button_func(self):
+        # Event handler for solute button
+        pass
+
+    def reaction_button_func(self):
+        # Event handler for reaction button
+        pass
+
+    def run_julia_script(self):
+        # Function to run Julia script
+        pass
+
+    def add_new_particulate(self):
+        # Function to add a new particulate
+        pass
+
+    def add_new_solute(self):
+        # Function to add a new solute
+        pass
+
+    def make_save_file_content(self):
+        # Function to generate content for save file
+        pass
+       
+    def start(self):
+        self.root.mainloop()
+
+    def quitting(self, event):
+        customtkinter.CTk.quit(self.root)
+
+if __name__ == "__main__":
+    app = BiofilmApp()
+    app.start()
