@@ -10,6 +10,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import ParticulateObjectFrame
 import ScrollableObjectFrame
 import SoluteObjectFrame
+import SimulationFrame
+import GeometryFrame
 
 
 class BiofilmApp:
@@ -85,9 +87,7 @@ class BiofilmApp:
         self.parameter_frame.grid_propagate(0)
 
     def create_frames(self, parameter_frame):
-        self.simulation_frame = customtkinter.CTkFrame(parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
         self.init_simulation_frame()
-        self.geometry_frame = customtkinter.CTkFrame(parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
         self.init_geometry_frame()
         self.particulate_frame = customtkinter.CTkFrame(parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
         self.init_particulate_frame()
@@ -110,12 +110,10 @@ class BiofilmApp:
         self.root.bind('<Destroy>', self.quitting)
 
     def init_simulation_frame(self):
-        # Initialization code for simulation frame
-        pass
+        self.simulation_frame = SimulationFrame.SimulationFrame(params=self.params, parent=self.parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
 
     def init_geometry_frame(self):
-        # Initialization code for geometry frame
-        pass
+        self.geometry_frame = GeometryFrame.GeometryFrame(params=self.params, parent=self.parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
 
     def init_particulate_frame(self):
         # Initialization code for particulate frame
