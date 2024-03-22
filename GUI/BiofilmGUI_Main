@@ -14,9 +14,9 @@ import SimulationFrame
 import GeometryFrame
 
 
-class BiofilmApp:
-    def __init__(self):
-        self.root = customtkinter.CTk()
+class BiofilmApp(customtkinter.CTk):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.set_up_window()
         self.params = self.initialize_parameters()
         self.particulates_arr = []
@@ -26,17 +26,18 @@ class BiofilmApp:
 
         self.create_menu()
         self.create_parameter_frame()
-        self.create_frames(parameter_frame=self.parameter_frame)
+        self.create_frames()
         self.bind_events()
+        self.mainloop()
 
     def set_up_window(self):
         customtkinter.set_appearance_mode("System")
         customtkinter.set_default_color_theme("blue")
-        self.root.title("Biofilm.py")
-        height = self.root.winfo_screenheight()
-        width = self.root.winfo_screenwidth()
-        self.root.geometry("%dx%d+0+0" % (width, height - 80))
-        self.root.update()
+        self.title("Biofilm.py")
+        self.height = self.winfo_screenheight()
+        self.width = self.winfo_screenwidth()
+        self.geometry("%dx%d+0+0" % (self.width, self.height - 80))
+        self.update()
 
     def initialize_parameters(self):
         params = {
@@ -58,18 +59,18 @@ class BiofilmApp:
         pass
 
     def create_menu(self):
-        menu_frame = customtkinter.CTkFrame(self.root, width=self.root.winfo_screenwidth() / 5, height=self.root.winfo_screenheight() - 40)
+        menu_frame = customtkinter.CTkFrame(self, width=self.winfo_screenwidth() / 5, height=self.winfo_screenheight() - 40)
         menu_frame.grid(row=0, column=0, pady=5, ipady=40, padx=5, sticky="N")
         menu_frame.grid_propagate(0)
 
-        customtkinter.CTkButton(menu_frame, text="Simulation Parameters", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.simulation_button_func).grid(row=1, column=0, pady=5, padx=10)
-        customtkinter.CTkButton(menu_frame, text="Geometry Parameters", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.geometry_button_func).grid(row=2, column=0, pady=5, padx=10)
-        customtkinter.CTkButton(menu_frame, text="Particulate Parameters", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.particulate_button_func).grid(row=3, column=0, pady=5, padx=10)
-        customtkinter.CTkButton(menu_frame, text="Solute Parameters", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.solute_button_func).grid(row=4, column=0, pady=5, padx=10)
-        customtkinter.CTkButton(menu_frame, text="Reactions", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.reaction_button_func).grid(row=5, column=0, pady=5, padx=10)
-        customtkinter.CTkButton(menu_frame, text="Run Simulation", width=(self.root.winfo_screenwidth() / 5) - 20, command=self.run_julia_script).grid(row=6, column=0, pady=50, padx=10, sticky="s")
+        customtkinter.CTkButton(menu_frame, text="Simulation Parameters", width=(self.winfo_screenwidth() / 5) - 20, command=self.simulation_button_func).grid(row=1, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Geometry Parameters", width=(self.winfo_screenwidth() / 5) - 20, command=self.geometry_button_func).grid(row=2, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Particulate Parameters", width=(self.winfo_screenwidth() / 5) - 20, command=self.particulate_button_func).grid(row=3, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Solute Parameters", width=(self.winfo_screenwidth() / 5) - 20, command=self.solute_button_func).grid(row=4, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Reactions", width=(self.winfo_screenwidth() / 5) - 20, command=self.reaction_button_func).grid(row=5, column=0, pady=5, padx=10)
+        customtkinter.CTkButton(menu_frame, text="Run Simulation", width=(self.winfo_screenwidth() / 5) - 20, command=self.run_julia_script).grid(row=6, column=0, pady=50, padx=10, sticky="s")
 
-        menubar = tk.Menu(self.root)
+        menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
         filemenu.add_command(label="New", command=self.do_nothing)
         filemenu.add_command(label="Open", command=self.do_nothing)
@@ -77,21 +78,21 @@ class BiofilmApp:
         filemenu.add_command(label="Save as...", command=self.save_as)
         filemenu.add_command(label="Close", command=self.do_nothing)
         filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=self.root.quit)
+        filemenu.add_command(label="Exit", command=self.quit)
         menubar.add_cascade(label="File", menu=filemenu)
-        self.root.config(menu=menubar)
+        self.config(menu=menubar)
 
     def create_parameter_frame(self):
-        self.parameter_frame = customtkinter.CTkFrame(self.root, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 26)
+        self.parameter_frame = customtkinter.CTkFrame(self, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 26)
         self.parameter_frame.grid(row=0, column=1, pady=5, padx=5, sticky="N")
         self.parameter_frame.grid_propagate(0)
 
-    def create_frames(self, parameter_frame):
+    def create_frames(self):
         self.init_simulation_frame()
         self.init_geometry_frame()
-        self.particulate_frame = customtkinter.CTkFrame(parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
+        self.particulate_frame = customtkinter.CTkFrame(self.parameter_frame, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 60)
         self.init_particulate_frame()
-        self.solute_frame = customtkinter.CTkFrame(parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
+        self.solute_frame = customtkinter.CTkFrame(self.parameter_frame, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 60)
         self.init_solute_frame()
 
     def save_as(self):
@@ -106,65 +107,67 @@ class BiofilmApp:
                 f.write(content)
                 self.params["file_path"] = file_path
 
+    def clearParameterFrame(self):
+        self.simulation_frame.grid_forget()
+        self.geometry_frame.grid_forget()
+        self.particulate_frame.grid_forget()
+        self.solute_frame.grid_forget()
+    
     def bind_events(self):
-        self.root.bind('<Destroy>', self.quitting)
+        self.bind('<Destroy>', self.quitting)
 
+    #Initializing different side menu options:
     def init_simulation_frame(self):
-        self.simulation_frame = SimulationFrame.SimulationFrame(params=self.params, parent=self.parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
+        self.simulation_frame = SimulationFrame.SimulationFrame(params=self.params, parent=self.parameter_frame, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 60)
 
     def init_geometry_frame(self):
-        self.geometry_frame = GeometryFrame.GeometryFrame(params=self.params, parent=self.parameter_frame, height=self.root.winfo_screenheight(), width=(4 * self.root.winfo_screenwidth() / 5) - 60)
+        self.geometry_frame = GeometryFrame.GeometryFrame(params=self.params, parent=self.parameter_frame, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 60)
 
     def init_particulate_frame(self):
-        self.ParticulateSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.particulate_frame, self.particulates_arr, False, height = height-20, width = ((4*width)/5)-50)
+        self.ParticulateSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.particulate_frame, self.particulates_arr, False, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
         self.ParticulateSOF.grid(row = 0, column = 0)
 
     def init_solute_frame(self):
-        # Initialization code for solute frame
-        pass
+        self.SoluteSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.solute_frame, self.solutes_arr, True, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
+        self.SoluteSOF.grid(row = 0, column = 0)
 
+    #Functions for side menu buttons:
     def simulation_button_func(self):
-        # Event handler for simulation button
-        pass
+        self.clearParameterFrame()
+        self.simulation_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3) 
 
     def geometry_button_func(self):
-        # Event handler for geometry button
-        pass
+        self.clearParameterFrame()
+        self.geometry_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3) 
 
     def particulate_button_func(self):
-        # Event handler for particulate button
-        pass
+        self.clearParameterFrame()
+        self.ParticulateSOF.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3)
+        self.update() 
 
     def solute_button_func(self):
-        # Event handler for solute button
-        pass
+        self.clearParameterFrame()
+        self.solute_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3) 
 
     def reaction_button_func(self):
-        # Event handler for reaction button
-        pass
+        self.clearParameterFrame()
+        #self.reaction_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3) 
 
     def run_julia_script(self):
         # Function to run Julia script
-        pass
-
-    def add_new_particulate(self):
-        # Function to add a new particulate
-        pass
-
-    def add_new_solute(self):
-        # Function to add a new solute
         pass
 
     def make_save_file_content(self):
         # Function to generate content for save file
         pass
        
-    def start(self):
-        self.root.mainloop()
 
     def quitting(self, event):
-        customtkinter.CTk.quit(self.root)
+        customtkinter.CTk.quit(self)
 
-if __name__ == "__main__":
-    app = BiofilmApp()
-    app.start()
+#if __name__ == "__main__":
+#    app = BiofilmApp()
+#    app.mainloop()
+
+app = BiofilmApp()
+app.mainloop()
