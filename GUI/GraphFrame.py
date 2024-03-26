@@ -195,6 +195,6 @@ class GraphFrame(customtkinter.CTkFrame):
         self.con_canvas = FigureCanvasTkAgg(con_fig, master = self.graph_frame)
         
 
-    draw()
+    #draw(self)
 
 
