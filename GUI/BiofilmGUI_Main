@@ -2,6 +2,7 @@ import os
 import subprocess
 import tkinter as tk
 from tkinter import filedialog
+import numpy as np
 
 import customtkinter
 import matplotlib
@@ -12,6 +13,10 @@ import ScrollableObjectFrame
 import SoluteObjectFrame
 import SimulationFrame
 import GeometryFrame
+import ReactionFrame
+
+import SaveFileBuilder
+import FileController
 
 
 class BiofilmApp(customtkinter.CTk):
@@ -21,14 +26,14 @@ class BiofilmApp(customtkinter.CTk):
         self.params = self.initialize_parameters()
         self.particulates_arr = []
         self.solutes_arr = []
-        self.particulate_count = 0
-        self.solutes_count = 0
+        #self.reactionSF = None
 
         self.create_menu()
         self.create_parameter_frame()
         self.create_frames()
         self.bind_events()
         self.mainloop()
+
 
     def set_up_window(self):
         customtkinter.set_appearance_mode("System")
@@ -38,6 +43,7 @@ class BiofilmApp(customtkinter.CTk):
         self.width = self.winfo_screenwidth()
         self.geometry("%dx%d+0+0" % (self.width, self.height - 80))
         self.update()
+
 
     def initialize_parameters(self):
         params = {
@@ -51,12 +57,15 @@ class BiofilmApp(customtkinter.CTk):
             "gridpoints": customtkinter.StringVar(value="0"),
             "initial_thickness": customtkinter.StringVar(value="0"),
             "layer_thickness": customtkinter.StringVar(value="0"),
+            "yield_coefficients": np.empty(0), #will hold an np array where rows represent particulates, columns represent solutes. data type is float.
             "file_path": ""
         }
         return params
 
+
     def do_nothing():
         pass
+
 
     def create_menu(self):
         menu_frame = customtkinter.CTkFrame(self, width=self.winfo_screenwidth() / 5, height=self.winfo_screenheight() - 40)
@@ -82,10 +91,12 @@ class BiofilmApp(customtkinter.CTk):
         menubar.add_cascade(label="File", menu=filemenu)
         self.config(menu=menubar)
 
+
     def create_parameter_frame(self):
         self.parameter_frame = customtkinter.CTkFrame(self, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 26)
         self.parameter_frame.grid(row=0, column=1, pady=5, padx=5, sticky="N")
         self.parameter_frame.grid_propagate(0)
+
 
     def create_frames(self):
         self.init_simulation_frame()
@@ -94,68 +105,91 @@ class BiofilmApp(customtkinter.CTk):
         self.init_particulate_frame()
         self.solute_frame = customtkinter.CTkFrame(self.parameter_frame, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 60)
         self.init_solute_frame()
+        self.reaction_frame = customtkinter.CTkFrame(self.parameter_frame, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 60)
+        
 
     def save_as(self):
-        content = self.make_save_file_content()
-        current_dir = os.path.dirname(__file__)
-        file_path = filedialog.asksaveasfilename(initialdir=current_dir + '../Saves',
-                                                  defaultextension=".jl",
-                                                  filetypes=[("Julia file", "*.jl")])
+        kinetics = self.reactionSF.getKinetics()
+        SFB = SaveFileBuilder.SaveFileBuilder(self.params, self.particulates_arr, self.solutes_arr, kinetics)
+        content = SFB.makeSaveFileContent()
+        controller = FileController.FileController()
+        file_path = controller.saveAs(content)
+        self.params['file_path'] = file_path
 
-        if file_path:
-            with open(file_path, 'w') as f:
-                f.write(content)
-                self.params["file_path"] = file_path
 
     def clearParameterFrame(self):
         self.simulation_frame.grid_forget()
         self.geometry_frame.grid_forget()
         self.particulate_frame.grid_forget()
         self.solute_frame.grid_forget()
+        self.reaction_frame.grid_forget()
     
+
     def bind_events(self):
         self.bind('<Destroy>', self.quitting)
+
 
     #Initializing different side menu options:
     def init_simulation_frame(self):
         self.simulation_frame = SimulationFrame.SimulationFrame(params=self.params, parent=self.parameter_frame, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 60)
 
+
     def init_geometry_frame(self):
         self.geometry_frame = GeometryFrame.GeometryFrame(params=self.params, parent=self.parameter_frame, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 60)
 
+
     def init_particulate_frame(self):
-        self.ParticulateSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.particulate_frame, self.particulates_arr, False, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
+        self.ParticulateSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.params, self.particulate_frame, self.particulates_arr, False, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
         self.ParticulateSOF.grid(row = 0, column = 0)
 
+
     def init_solute_frame(self):
-        self.SoluteSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.solute_frame, self.solutes_arr, True, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
+        self.SoluteSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.params, self.solute_frame, self.solutes_arr, True, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
         self.SoluteSOF.grid(row = 0, column = 0)
+    
+
+    def init_reaction_frame(self):
+        self.reactionSF = ReactionFrame.ReactionFrame(self.reaction_frame, self.params, self.solutes_arr, self.particulates_arr,height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50) #ReactionSF = reactionScrollableFrame
+        self.reactionSF.grid(row = 0, column = 0)
+
 
     #Functions for side menu buttons:
     def simulation_button_func(self):
         self.clearParameterFrame()
         self.simulation_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3) 
 
+
     def geometry_button_func(self):
         self.clearParameterFrame()
         self.geometry_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3) 
 
+
     def particulate_button_func(self):
         self.clearParameterFrame()
-        self.ParticulateSOF.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3)
-        self.update() 
+        self.particulate_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3)
+
 
     def solute_button_func(self):
         self.clearParameterFrame()
         self.solute_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3) 
 
+
     def reaction_button_func(self):
         self.clearParameterFrame()
-        #self.reaction_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3) 
+        self.init_reaction_frame()
+        self.reaction_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3)
+        self.reactionSF.update() 
+
 
     def run_julia_script(self):
         # Function to run Julia script
-        pass
+        print("RUNNING SCRIPT")
+        try:
+            # Run the Julia script as a subprocess
+            subprocess.run(['julia', self.params["file_path"]], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error running Julia script: {e}") 
+
 
     def make_save_file_content(self):
         # Function to generate content for save file

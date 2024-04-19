@@ -10,12 +10,35 @@ class GraphFrame(customtkinter.CTkFrame):
         super().__init__(master, **kwargs)
         self.master = master
         self.time = np.linspace(0, 10, 1000)
+        self.draw()
+        self.type = ''
+
+
+    def getParams(self):
+        list = []
+        if self.type == 'constant':
+            list.append('constant')
+            list.append(self.con_y)
+        elif self.type == 'periodic':
+            list.append('periodic')
+            list.append(self.per_amplitude)
+            list.append(self.per_period)
+            list.append(self.per_duration)
+            list.append(self.per_tstart)
+        elif self.type == 'sin':
+            list.append('sin')
+            list.append(self.sin_amplitude)
+            list.append(self.sin_period)
+            list.append(self.sin_y_offset)
+        return list
+
 
     def heavy(self):
         heavi_y_values = np.zeros(len(self.time))
         for i in range(len(self.time)):
             heavi_y_values[i] = 0 if self.time[i] < self.per_tstart else self.per_amplitude*(1 - np.heaviside(((self.time[i] - self.per_tstart) % self.per_period) - self.per_duration, 0.5))
         return heavi_y_values
+
 
     #Functions for CONSTANT graph:
     def updateConstY(self, new_y):
@@ -24,15 +47,20 @@ class GraphFrame(customtkinter.CTkFrame):
         self.con_ax.axhline(y = new_y)
         self.con_canvas.draw()
 
+
     def constant(self): #called when 'constant' button is selected
         #disable constant button, and enable other buttons in case they were discabled, then deselect other buttons.
+        self.graph_frame.grid_forget()
+        self.draw()
+        self.type = "constant"
+        
         self.constant_button.configure(state="disabled")
         self.periodic_button.configure(state="normal")
         self.sin_button.configure(state="normal")
         self.periodic_button.deselect()
         self.sin_button.deselect()
         #self.graph_frame.grid_forget()
-        self.sin_canvas.get_tk_widget().grid(row = 0, column = 0, rowspan = 3, padx = 5) #place canvas
+        self.sin_canvas.get_tk_widget().grid(row = 1, column = 1, rowspan = 4, padx = 5) #place canvas
 
         y_label = customtkinter.CTkLabel(master = self.graph_frame, text = "inflow").grid(row = 1, column = 8)
         y_entry = customtkinter.CTkEntry(master = self.graph_frame)
@@ -43,6 +71,7 @@ class GraphFrame(customtkinter.CTkFrame):
         self.con_canvas.draw()
         self.update()
 
+
     #Functions for PERIODIC graph:
     def updatePerAmplitude(self, amp):
         self.per_ax.cla()
@@ -51,12 +80,14 @@ class GraphFrame(customtkinter.CTkFrame):
         self.per_ax.plot(self.time, self.heavy())
         self.per_canvas.draw()
 
+
     def updatePerPeriod(self, per):
         self.per_ax.cla()
         self.per_period = float(per)
         #self.params.get("per_ax").plot(self.params.get("time"), 0 if self.params.get("time") < self.params.get("per_tstart") else self.params.get("amplitude")(1 - np.heaviside(((self.params.get("time") - self.params.get("per_tstart")) % self.params.get("period")) - self.params.get("duration")), 0.5))
         self.per_ax.plot(self.time, self.heavy())
         self.per_canvas.draw()
+
 
     def updatePerDuration(self, duration):
         self.per_ax.cla()
@@ -65,6 +96,7 @@ class GraphFrame(customtkinter.CTkFrame):
         self.per_ax.plot(self.time, self.heavy())
         self.per_canvas.draw()
 
+
     def updatePerTStart(self, tstart):
         self.per_ax.cla()
         self.per_tstart = float(tstart)
@@ -72,15 +104,20 @@ class GraphFrame(customtkinter.CTkFrame):
         self.per_ax.plot(self.time, self.heavy())
         self.per_canvas.draw()
 
+
     def periodic(self): #called when 'periodic' button is selected
         #disable periodic button, and enable other buttons in case they were discabled, then deselect other buttons.
+        self.graph_frame.grid_forget()
+        self.draw()
+        self.type = "periodic"
+
         self.periodic_button.configure(state="disabled")
         self.constant_button.configure(state="normal")
         self.sin_button.configure(state="normal")
         self.constant_button.deselect()
         self.sin_button.deselect()
         #self.graph_frame.grid_forget()
-        self.per_canvas.get_tk_widget().grid(row = 0, column = 0, rowspan = 3, padx = 5) #place canvas
+        self.per_canvas.get_tk_widget().grid(row = 1, column = 1, rowspan = 4, padx = 5) #place canvas
 
         amp_label = customtkinter.CTkLabel(master = self.graph_frame, text = "amplitude").grid(row = 1, column = 8)
         amp_entry = customtkinter.CTkEntry(master = self.graph_frame)
@@ -115,7 +152,8 @@ class GraphFrame(customtkinter.CTkFrame):
         
         self.per_canvas.draw()
         self.update()
-    
+
+
     #Functions for SINUSOIDAL graph:
     def updateSinAmplitude(self, amp):
         self.sin_ax.cla()
@@ -123,11 +161,13 @@ class GraphFrame(customtkinter.CTkFrame):
         self.sin_ax.plot(self.time, self.sin_y_offset + self.sin_amplitude*np.sin(2*math.pi*self.time/self.sin_period))
         self.sin_canvas.draw()
 
+
     def updateSinPeriod(self, per):
         self.sin_ax.cla()
         self.sin_period = float(per)
         self.sin_ax.plot(self.time, self.sin_y_offset + self.sin_amplitude*np.sin(2*math.pi*self.time/self.sin_period))            
         self.sin_canvas.draw()
+
 
     def updateSinYOffset(self, offset):
         self.sin_ax.cla()
@@ -135,15 +175,20 @@ class GraphFrame(customtkinter.CTkFrame):
         self.sin_ax.plot(self.time, self.sin_y_offset + self.sin_amplitude*np.sin(2*math.pi*self.time/self.sin_period))
         self.sin_canvas.draw()
 
+
     def sin(self):
         #disable sin button, and enable other buttons in case they were discabled, then deselect other buttons.
+        self.graph_frame.grid_forget()
+        self.draw()
+        self.type = "sin"
+
         self.sin_button.configure(state="disabled")
         self.constant_button.configure(state="normal")
         self.periodic_button.configure(state="normal")
         self.constant_button.deselect()
         self.periodic_button.deselect()
         #self.graph_frame.grid_forget()
-        self.sin_canvas.get_tk_widget().grid(row = 0, column = 0, rowspan = 3, padx = 5) #place canvas
+        self.sin_canvas.get_tk_widget().grid(row = 1, column = 1, rowspan = 4, padx = 5) #place canvas
 
         amp_label = customtkinter.CTkLabel(master = self.graph_frame, text = "amplitude").grid(row = 1, column = 8)
         amp_entry = customtkinter.CTkEntry(master = self.graph_frame)
@@ -171,6 +216,7 @@ class GraphFrame(customtkinter.CTkFrame):
         self.sin_canvas.draw()
         self.update()
     
+
     def draw(self):
         #frame for graph and parameters:
         self.graph_frame = customtkinter.CTkFrame(master= self)
@@ -178,11 +224,11 @@ class GraphFrame(customtkinter.CTkFrame):
                     
         #Buttons:
         self.constant_button = customtkinter.CTkRadioButton(master = self.graph_frame, text= "constant", command = self.constant)
-        self.constant_button.grid(row = 1, column = 1, padx = 16, pady = 30)
+        self.constant_button.grid(row = 1, column = 0, padx = 16, pady = 30)
         self.periodic_button = customtkinter.CTkRadioButton(master = self.graph_frame, text= "periodic", command = self.periodic)
-        self.periodic_button.grid(row = 2, column = 1, padx = 16, pady = 30)
+        self.periodic_button.grid(row = 2, column = 0, padx = 16, pady = 30)
         self.sin_button = customtkinter.CTkRadioButton(master = self.graph_frame, text= "sinusoidal", command = self.sin)
-        self.sin_button.grid(row = 3, column = 1, padx = 16, pady = 30)
+        self.sin_button.grid(row = 3, column = 0, padx = 16, pady = 30)
 
         sin_fig, sin_ax = plt.subplots()
         self.sin_ax = sin_ax
