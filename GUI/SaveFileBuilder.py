@@ -57,6 +57,8 @@ class SaveFileBuilder():
         content = content + self.getTankParams()
         content = content + self.getBiofilmParams()
 
+        content = content + """savePlots = true,
+                               makePlots = true,"""
         content = content +        """)\n\tt,zm,Xt,St,Pb,Sb,Lf,sol = BiofilmSolver(p) # Run solver
         biofilm_plot(sol,p) # Plot final results"""
         return content

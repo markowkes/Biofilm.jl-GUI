@@ -30,7 +30,8 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         self.initKinetics()
 
 
-    def initStoichGrid(self): #At the top of the reaction frame is the stoichiometry grid, which contains the yeild coeffcients for our solutes/particulates
+    def initStoichGrid(self): #At the top of the reaction frame is the stoichiometry grid, which contains the yeild 
+                                #coeffcients for our solutes/particulates
         label = customtkinter.CTkLabel(self, text= 'Stoichiometry')
         label.cget("font").configure(size=20)
         label.grid(row = 0, column = 0)       

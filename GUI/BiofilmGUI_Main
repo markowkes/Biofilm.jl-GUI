@@ -17,6 +17,7 @@ import ReactionFrame
 
 import SaveFileBuilder
 import FileController
+import PlotWindow
 
 
 class BiofilmApp(customtkinter.CTk):
@@ -46,6 +47,8 @@ class BiofilmApp(customtkinter.CTk):
 
 
     def initialize_parameters(self):
+        #dictionary of parameters, each value is a stringvalue, which is a wrapper around a string which can be put in an entry box widget, and the variable automatically updates the value.
+        #enter default values of variables here
         params = {
             "title": customtkinter.StringVar(value=""),
             "run_time": customtkinter.StringVar(value="1"),
@@ -54,12 +57,13 @@ class BiofilmApp(customtkinter.CTk):
             "volume": customtkinter.StringVar(value="0"),
             "surface_area": customtkinter.StringVar(value="0"),
             "flowrate": customtkinter.StringVar(value="0"),
-            "gridpoints": customtkinter.StringVar(value="0"),
-            "initial_thickness": customtkinter.StringVar(value="0"),
-            "layer_thickness": customtkinter.StringVar(value="0"),
+            "gridpoints": customtkinter.StringVar(value="10"),
+            "initial_thickness": customtkinter.StringVar(value="0.1"),
+            "layer_thickness": customtkinter.StringVar(value="0.1"),
             "yield_coefficients": np.empty(0), #will hold an np array where rows represent particulates, columns represent solutes. data type is float.
             "file_path": ""
         }
+        self.plot_window = None
         return params
 
 
@@ -77,7 +81,9 @@ class BiofilmApp(customtkinter.CTk):
         customtkinter.CTkButton(menu_frame, text="Particulate Parameters", width=(self.winfo_screenwidth() / 5) - 20, command=self.particulate_button_func).grid(row=3, column=0, pady=5, padx=10)
         customtkinter.CTkButton(menu_frame, text="Solute Parameters", width=(self.winfo_screenwidth() / 5) - 20, command=self.solute_button_func).grid(row=4, column=0, pady=5, padx=10)
         customtkinter.CTkButton(menu_frame, text="Reactions", width=(self.winfo_screenwidth() / 5) - 20, command=self.reaction_button_func).grid(row=5, column=0, pady=5, padx=10)
-        customtkinter.CTkButton(menu_frame, text="Run Simulation", width=(self.winfo_screenwidth() / 5) - 20, command=self.run_julia_script).grid(row=6, column=0, pady=50, padx=10, sticky="s")
+        customtkinter.CTkButton(menu_frame, text="Run Simulation", width=(self.winfo_screenwidth() / 5) - 20, command=self.run_handler).grid(row=6, column=0, pady=50, padx=10, sticky="s")
+        customtkinter.CTkButton(menu_frame, text="Test", width=(self.winfo_screenwidth() / 5) - 20, command=self.open_plot_window).grid(row=7, column=0, pady=50, padx=10, sticky="s")
+
 
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
@@ -181,19 +187,40 @@ class BiofilmApp(customtkinter.CTk):
         self.reactionSF.update() 
 
 
+    def run_handler(self): #called when 'run simulation' is pressed
+        return_val, content = self.run_julia_script()
+        #return_val == 1 if no error running the file
+        if return_val == 1:
+            self.open_plot_window()
+
+    def open_plot_window(self):
+        if self.plot_window is None or not self.plot_window.winfo_exists():
+            self.plot_window = PlotWindow.PlotWindow(self)  # create window if its None or destroyed
+            self.plot_window.focus()
+        else:
+            self.plot_window.focus()  # if window exists focus it
+
+
     def run_julia_script(self):
         # Function to run Julia script
         print("RUNNING SCRIPT")
         try:
-            # Run the Julia script as a subprocess
-            subprocess.run(['julia', self.params["file_path"]], check=True)
+            # Run the Julia script as a subprocess and capture its output
+            completed_process = subprocess.run(['julia', self.params["file_path"]], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            
+            # Access the output and error streams
+            output = completed_process.stdout
+            error = completed_process.stderr
+
+            # Handle the output as needed
+            if output:
+                print("Output:", output)
+            if error:
+                print("Error:", error)
+            return 1, output
         except subprocess.CalledProcessError as e:
-            print(f"Error running Julia script: {e}") 
-
-
-    def make_save_file_content(self):
-        # Function to generate content for save file
-        pass
+            print(f"Error running Julia script: {e}")
+            return 0, 0
        
 
     def quitting(self, event):

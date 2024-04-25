@@ -16,3 +16,17 @@ class FileController():
             with open(file_path, 'w') as f:
                 f.write(content)
                 return file_path
+            
+    def getPlotFilenames(self):
+        folder_path = "Biofilm.jl-main/savePlots"
+
+        # Get the full path by joining the current directory and the relative folder path
+        full_path = os.path.join(os.getcwd(), folder_path)
+
+        # Get all files in the folder
+        png_files = [f for f in os.listdir(full_path) if os.path.isfile(os.path.join(full_path, f)) and f.endswith('.png')]
+        return png_files
+    
+
+    def getCurrDir(self):
+        return os.getcwd()
