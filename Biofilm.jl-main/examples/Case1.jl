@@ -62,7 +62,7 @@ p = (
             Lfo = 5.0e-6,     # Biofilm initial thickness [m]
             LL = 2.0e-4,      # Boundary layer thickness [m]
 
-            makePlots = true,
+            makePlots =false,
             savePlots=true,
 )
 	t,zm,Xt,St,Pb,Sb,Lf,sol = BiofilmSolver(p) # Run solver
