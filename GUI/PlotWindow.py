@@ -4,7 +4,7 @@ import FileController
 from PIL import Image
 
 class PlotWindow(customtkinter.CTkToplevel):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, tfinal, step, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.height = self.winfo_screenheight() - 200
         self.width = self.winfo_screenwidth() - 280
@@ -15,6 +15,7 @@ class PlotWindow(customtkinter.CTkToplevel):
         self.current_step = None
 
         self.init_window()
+
 
     def slider_event(self, value):
         #round the incoming value, floats can have rounding errors

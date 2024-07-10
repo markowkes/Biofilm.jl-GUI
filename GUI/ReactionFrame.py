@@ -113,7 +113,7 @@ class Kinetic(customtkinter.CTkFrame): #one kinetic object represents one partic
         muMaxEntry = customtkinter.CTkEntry(master=self, textvariable=self.muMax)
         muMaxEntry.grid(row = 1, column = 1)
         
-        row = 2 #NEXT STEP DEBUG FILLING IN DEPENDANCY MATRIX wrong indices
+        row = 2 
         solute_index = 0
         for solute in self.solutes:
             #Make new 'Dependancy' object for each solute, store it in dependancy_matrix 

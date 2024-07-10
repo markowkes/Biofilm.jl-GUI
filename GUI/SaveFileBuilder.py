@@ -60,7 +60,8 @@ class SaveFileBuilder():
         content = content + """savePlots = true,
                                makePlots = true,"""
         content = content +        """)\n\tt,zm,Xt,St,Pb,Sb,Lf,sol = BiofilmSolver(p) # Run solver
-        biofilm_plot(sol,p) # Plot final results"""
+        biofilm_plot(sol,p) # Plot final results
+        #biofilm_sol2csv(sol,p,filname)"""
         return content
 
 
@@ -130,7 +131,7 @@ class SaveFileBuilder():
             # ---------------------- #\n"""
         particulate_params = self.getParticulateObjectParams(self.particulates_arr)
         particulate_param_string = """
-            XNames =[{}],\t\t# Particulate names
+            XNames = [{}],\t\t# Particulate names
             Xto =   [{}],\t\t# Tank particulate concentration initial condition(s)
             Pbo =   [{}],\t\t# Biofilm particulates volume fraction initial condition(s) 
             rho =   [{}],\t\t# Particulate densities

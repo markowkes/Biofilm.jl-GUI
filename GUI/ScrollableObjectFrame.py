@@ -14,6 +14,8 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
         self.frame_list = frame_list
         add_frame_button = customtkinter.CTkButton(self, text = "Add New", command = self.addEmptyFrame, height=40)
         add_frame_button.grid(row = 0, column = 0, sticky = "w", ipadx = 20)
+        if len(frame_list) > 0:
+            self.loadFrames()
     
 
     def drawFrames(self):
@@ -66,4 +68,7 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
         self.frame_list.append(new_frame)
         self.drawFrame()
 
+
+    def loadFrames(self):
+        pass
         

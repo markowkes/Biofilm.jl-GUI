@@ -30,3 +30,18 @@ class FileController():
 
     def getCurrDir(self):
         return os.getcwd()
+    
+
+    def load(self):
+            #root.withdraw()  # Hide the root window
+
+            # Open a file dialog and get the selected file's path
+            file_path = filedialog.askopenfilename()
+
+            # Read the contents of the file into a string
+            if file_path:
+                with open(file_path, 'r') as file:
+                    file_contents = file.read()
+
+                return file_path, file_contents
+            return 0,0
