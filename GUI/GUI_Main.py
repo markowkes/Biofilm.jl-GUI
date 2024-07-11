@@ -203,7 +203,7 @@ class BiofilmApp(customtkinter.CTk):
             #make new FileLoader object, passing in file contents string. 
             fl = FileLoader.FileLoader(file_contents)
             #This function loads the file's params into self.params, and makes the solute/partuculate objects and the yxs matrix
-            solutes, particulates, yxs = fl.saveDataToStructures(self.params)
+            solutes, particulates, yxs = fl.saveDataToStructures(self.params, self.SoluteSOF, self.ParticulateSOF)
             self.solutes_arr = solutes
             self.SoluteSOF.loadFrames(solutes)
             self.particulates_arr = particulates
@@ -281,7 +281,7 @@ class BiofilmApp(customtkinter.CTk):
 
     def reaction_button_func(self):
         self.menuButtonPress(button_index=4)
-        self.reactionSF.initReactionFrame(self.particulates_arr, self.solutes_arr)
+        #self.reactionSF.initReactionFrame(self.particulates_arr, self.solutes_arr)
         self.reaction_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3)        
         #self.reactionSF.update() 
 

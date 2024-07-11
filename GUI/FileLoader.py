@@ -7,7 +7,8 @@ import customtkinter
 class FileLoader():
     def __init__(self, file_content):
         file_parameters = self.parse_parameters(file_content)
-        print(file_parameters)
+
+        #print(file_parameters)
 
 
     # Define a function to parse the parameters string and return them as a dictionary
@@ -28,9 +29,29 @@ class FileLoader():
         self.file_params = parameters
 
         return parameters
+    
+
+    def parse_kinetics_comment(self, file_content):
+        start = file_content.find("===Kinetics===", start = 900)
+        if start == -1:
+            print("error: cannot find '===Kinetics===' comment in save file.")
+
+        end = file_content.find("===End_Kinetics===", start = start)
+        if end == -1:
+            print("error: cannot find '===End_Kinetics===' comment in save file.")
+        
+        # get a substring which is only the kinetics comment
+        substring = file_content[start:end]
+        # split into list of lines
+        lines = substring.splitlines()
+        for line in lines:
+            #each line represents a kinetic (dependancy). is of the format: type (monod/inhibition), particulate_index, solute_index, Ki/Km OR 'zero'
+            comma_separated_values = line.split(', ')
 
 
-    def saveDataToStructures(self, params):
+
+
+    def saveDataToStructures(self, params, solutes_scrollable_object_frame, particulates_scrollable_object_frame):
         #This function will...
         solute_objects = []
         particulate_objects = []
@@ -50,16 +71,27 @@ class FileLoader():
         params["layer_thickness"].set(self.file_params["LL"])
 
         #get array params:
-            #particulate params:
+        #particulate params:
         XNames = self.file_params["XNames"].split(", ") 
         Xto = self.file_params["Xto"].split(", ")
         Pbo = self.file_params["Pbo"].split(", ")
         rho = self.file_params["rho"].split(", ")
         #get srcX
+        srcX = self.file_params["srcX"].split("(S,X,Lf,t,z,p) ->")
+        edited_srcX = []
+        for term in srcX:
+            if term != '':
+                edited_srcX.append(term.strip())
         #get mu (first make sure comments are taken out)
-            #solute params:
+
+        #solute params:
         SNames = self.file_params["SNames"].split(", ")
         #get Sin
+        Sin = self.file_params["Sin"].split("(t) ->")
+        edited_Sin = []
+        for term in Sin:
+            if term != '':
+                edited_Sin.append(term.strip())
         Sto = self.file_params["Sto"].split(", ")
         Sbo = self.file_params["Sbo"].split(", ")
         Yxs = self.file_params["Yxs"].split() #this needs to be reshaped
@@ -76,22 +108,24 @@ class FileLoader():
         Yxs = np.reshape(a = Yxs, newshape=(row_count, col_count))
 
         #Make solute objects with correct parameters, place in 'solute_objects' list to be returned
-        for solute_index in col_count:
+        for solute_index in range(col_count):
             frame_params = {"name": customtkinter.StringVar(value = SNames[solute_index]),
                             "sto": customtkinter.StringVar(value = Sto[solute_index]),
                             "sbo": customtkinter.StringVar(value = Sbo[solute_index]),
                             "dt": customtkinter.StringVar(value = Dt[solute_index]),
-                            "db": customtkinter.StringVar(value = Db[solute_index])}
-            new_frame = SoluteObjectFrame.ObjectFrame(None, frame_params, solute_index) #Problem! the 'None' here is the master, which should really be the scrollable object frame
+                            "db": customtkinter.StringVar(value = Db[solute_index]),
+                            "Sin": edited_Sin[solute_index]}
+            new_frame = SoluteObjectFrame.ObjectFrame(solutes_scrollable_object_frame, frame_params) 
             solute_objects.append(new_frame)
 
         #make particulate objects with correct parameters, place in 'particulate_objects' list to be returned
-        for particulate_index in row_count:
+        for particulate_index in range(row_count):
             frame_params = {"name": customtkinter.StringVar(value = XNames[particulate_index]),
                             "xto": customtkinter.StringVar(value = Xto[particulate_index]),
                             "pbo": customtkinter.StringVar(value = Pbo[particulate_index]),
-                            "rho": customtkinter.StringVar(value = rho[particulate_index])}
-            new_frame = ParticulateObjectFrame.ObjectFrame(None, frame_params, particulate_index) #Problem! the 'None' here is the master, which should really be the scrollable object frame
+                            "rho": customtkinter.StringVar(value = rho[particulate_index]),
+                            "srcX": edited_srcX[particulate_index]} #TODO: this srcX is not being used currently, this would be in the interactions part of reaction menus
+            new_frame = ParticulateObjectFrame.ObjectFrame(particulates_scrollable_object_frame, frame_params) 
             particulate_objects.append(new_frame)
 
         return solute_objects, particulate_objects, Yxs

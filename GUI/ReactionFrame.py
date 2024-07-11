@@ -2,36 +2,37 @@ import customtkinter
 import StoichiometryGrid
 import numpy as np
 
+
 #In this file the classes ReactionFrame, Kinetics, and Dependancy are defined.
 
 #Class for the 'Reactions' menu
 class ReactionFrame(customtkinter.CTkScrollableFrame):
-    def __init__(self, parent, params, solutes, particulates, *args, **kwargs): #takes in pointer to parent frame, the parameters dictionary, the array of soluteObjectFrames, and the array of ParticulateObjectFrames.
+    def __init__(self, parent, params, solutes, particulates, dependancies, mu_max_list, *args, **kwargs): #takes in pointer to parent frame, the parameters dictionary, the array of soluteObjectFrames, and the array of ParticulateObjectFrames.
         super().__init__(parent, *args, **kwargs)
         self.params = params
         self.solute_arr = solutes
         self.particulate_arr = particulates
-
-        #Init dependancy_matrix. This will hold a 2d np array of 'Dependancy' objects, as defined at the end of this file. 
-        #Rows are particulates, and columns are solutes. ex. row 1 col 2 represents the dependancy of particulate 1 on solute 2
-        self.dependancy_matrix = np.empty((len(particulates), len(solutes)), dtype=Dependancy) 
-        self.initReactionFrame()
         
 
-    def initReactionFrame(self):
+    def initReactionFrame(self, particulates, solutes):
+        self.particulate_arr = particulates
+        self.solute_arr = solutes
         #initialize and grid frame for stoichiometry 
         self.StoichFrame = customtkinter.CTkFrame(self)
         self.StoichFrame.grid(row = 1, column = 0) 
         self.initStoichGrid()
 
+        #define dependancy_matrix. This will hold a 2d np array of 'Dependancy' objects, as defined at the end of this file. 
+        #Rows are particulates, and columns are solutes. ex. row 1 col 2 represents the dependancy of particulate 1 on solute 2
+        self.dependancy_matrix = np.empty((len(self.particulate_arr), len(self.solute_arr)), dtype=Dependancy.Dependancy())
+
         #initialize and grid frame for kinetics 
-        self.kineticsFrame = customtkinter.CTkFrame(self)
-        self.kineticsFrame.grid(row=3, column = 0, pady = 5)
+        self.kineticsFrame = customtkinter.CTkFrame(self) #make new child frame for kinetics section
+        self.kineticsFrame.grid(row=3, column = 0, pady = 20)
         self.initKinetics()
 
 
-    def initStoichGrid(self): #At the top of the reaction frame is the stoichiometry grid, which contains the yeild 
-                                #coeffcients for our solutes/particulates
+    def initStoichGrid(self): #At the top of the reaction frame is the stoichiometry grid, which contains the yield coeffcients for our solutes/particulates
         label = customtkinter.CTkLabel(self, text= 'Stoichiometry')
         label.cget("font").configure(size=20)
         label.grid(row = 0, column = 0)       
@@ -48,48 +49,101 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         label.grid(row = 2, column = 0)
 
         #initialize and grid kinetics frame object for each particulate (kinetics object defined below)
+        self.kinetics = []
         for index in range(len(self.particulate_arr)):
             par = self.particulate_arr[index]
             k = Kinetic(self.kineticsFrame, par, self.solute_arr, self.dependancy_matrix, index)
+            self.kinetics.append(k)
             k.grid(row=index, column = 0)
+
+    
+    def get_mu_max_string(self): 
+        # This function will take the 'muMax' value for all of the particulates and put it in a comma-separated string, to be put in the save file
+        mu_max_string = '       #, '
+        for k in self.kinetics:
+            mu_max_string += k.get_mu_max()
+            mu_max_string += ', '
+        mu_max_string = mu_max_string[:-2] #trim off excess ', '
+        mu_max_string += '\n'
+        return mu_max_string
 
 
     def getKinetics(self):
         #this function is used in the saveFileBuilder to get the source terms. It builds an array of strings which look like:
         # 'mumax*(S[1]./(KmB1.+S[1])).*(S[3]./(KmB3.+S[3]))' as an example. This goes in the 'mu' variable in the particulate parameters section
         # This string is built here rather than in the SaveFileBuilder because it is more simple.
-        kinetics_arr = np.full(shape=len(self.particulate_arr), dtype=str, fill_value='')
+        kinetics_arr = np.full(shape=len(self.particulate_arr), fill_value='', dtype='<U256')
+
+        #this 'comment' will contain the information of each dependancy, and this will be placed in the save file as a comment,
+        # so Biofilm.jl will ignore it. This information will be used during the file loading process to populate the kinetics
+        # fields. This is a workaround so that I don't have to parse the 'mu' string described in the comment at the top of this function.
+        comment = '     #===Kinetics===\n'
+        comment += self.get_mu_max_string()
         row_index = 0
-        for row in self.dependancy_matrix:
+        for row in self.dependancy_matrix: #each row represents a particulate
             string = ""
             solute_index = 0
+            non_zero_dependancy_present = False
+
             for solute in row:
                 #get info from dependancy object 
-                type, param, muMax = solute.get() 
+                type, param, muMax = solute.get()
                 
                 #insert muMax at start of string
                 if solute_index == 0:
                     string = muMax + ' * '
 
                 #insert correct dependancy equation
-                if type == "monod":
-                    string = "( S[{}] / ({} + S[{}]) )"
+                if type.strip() == "monod":
+                    non_zero_dependancy_present = True
+
+                    print('monod')
+                    string += "( S[{}] / ({} + S[{}]) )"
                     string = string.format(str(solute_index), str(param), str(solute_index))
-                elif type == "inhibition":
-                    string = "( 1 / (1 + (S[{}] / {})) )"
+
+                    next_comment_line = '       #, monod, {}, {}, {}\n'
+                    comment += next_comment_line.format(str(row_index), str(solute_index), str(param))
+
+                    #insert multiplication between terms
+                    string += ' * '
+
+                elif type.strip() == "inhibition":
+                    non_zero_dependancy_present = True
+
+                    print('inhibition')
+                    string += "( 1 / (1 + (S[{}] / {})) )"
                     string = string.format(str(solute_index), param)
-                else:
-                    string = "0.0"
+
+                    next_comment_line = '       #, inhibition, {}, {}, {}\n'
+                    comment += next_comment_line.format(str(row_index), str(solute_index), str(param))
+
+                    #insert multiplication between terms,
+                    string += ' * '
                 
-                #insert multiplication between terms, then +1 to index
-                string += ' * ' 
+                else:
+                    next_comment_line = '       #, zero\n'
+
+                # add +1 to index
                 solute_index += 1
             
-            #add string to array, trim off last 3 characters which will be ' * '.
-            kinetics_arr[row_index] = string[:-3]
+
+
+            if non_zero_dependancy_present == False:
+                string += "0.0"
+            else:
+                #add string to array, trim off last 3 characters which will be ' * '.
+                string = string[:-3]
+
+            kinetics_arr[row_index] = string
             row_index += 1
-        return kinetics_arr
-                
+        comment += '        #===End_Kinetics===\n'
+        print(kinetics_arr)
+        return kinetics_arr, comment
+
+
+    #TODO: - make it so reactionFrame takes in info on dependancies
+    # - call reactionFrame with empty dependancies by default
+    # - call reactionFrame with appropriate info in FileLoader.
             
 
 class Kinetic(customtkinter.CTkFrame): #one kinetic object represents one particulate
@@ -126,56 +180,15 @@ class Kinetic(customtkinter.CTkFrame): #one kinetic object represents one partic
 
             row += 1
             solute_index += 1
-        print("")
+        #print("")
             
 
     def setMuMax(self, val):
         self.muMax = val
 
-
-
-class Dependancy():
-    def __init__(self, parent, type, param, row, muMax):
-        self.type = customtkinter.StringVar(value=type)
-        self.param = customtkinter.StringVar(value=param)
-        self.parent = parent
-        self.row = row
-        self.muMax = muMax
-
-        #initiallize (but don't grid) entry box for parameter - in the case that the dependancy needs the extra parameter
-        self.entry = customtkinter.CTkEntry(parent, textvariable=self.param, width=50)
-
-        #initialize and grid drop down menu for type - self.type will automatically update to be equal to the dropdown selection.
-        #The dropdown will call update_layout whenever the selection changes.
-        self.optionmenu = customtkinter.CTkOptionMenu(parent,values=["zero", "monod", "inhibition", "first"],
-                                                    variable=self.type, command = self.update_layout)
-        self.optionmenu.grid(row=row, column = 2, padx = 3)
-
-        #initialize and grid a spacer - this will be to the right of the dropdown and will be replaced with the param box if needed.
-        spacer = customtkinter.CTkLabel(self.parent, text="")
-        spacer.grid(row = row, column = 3, columnspan=2)
-
-
-    def update_layout(self, choice): 
-        #this function places the correct parameter entry box+label for the monod and inhibition equations
-        type = self.type.get()
-        if type == "monod":
-            param_label = customtkinter.CTkLabel(self.parent, text="Km")
-            param_label.grid(row = self.row, column = 3)
-            self.gridEntry()
-        elif type == "inhibition":
-            param_label = customtkinter.CTkLabel(self.parent, text="Ki")
-            param_label.grid(row = self.row, column = 3)
-            self.gridEntry()
-        else:
-            #delete the entry if first order or zero are selected
-            self.entry.grid_forget()
-
-
-    def gridEntry(self):
-        self.entry.grid(row = self.row, column = 4)
-
     
-    def get(self):
-        return self.type, self.param.get(), self.muMax.get()
-        
+    def get_mu_max(self):
+        return self.muMax.get()
+    
+
+
