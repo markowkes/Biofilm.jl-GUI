@@ -23,6 +23,7 @@ import SaveFileBuilder
 import FileLoader
 import FileController
 import PlotWindow
+import Dependancy
 
 #TODO:
 '''
@@ -66,7 +67,8 @@ class BiofilmApp(customtkinter.CTk):
         self.params = self.initialize_parameters()
         self.particulates_arr = []
         self.solutes_arr = []
-        #self.reactionSF = None
+        self.dependancies = None
+        self.mu_max_list = []
 
         self.create_menu()
         self.appFrame.pack() #because the menu bar, which holds the 'file' button ect. uses the 'pack' placement method, a frame for the whole app must also be packed if the 'grid' placement method is to be used.
@@ -107,8 +109,8 @@ class BiofilmApp(customtkinter.CTk):
         }
         self.plot_window = None
         return params
-
-
+    
+    
     def do_nothing(self): #for setting commands of buttons to do nothing - temprorary helper
         pass
 
@@ -203,12 +205,14 @@ class BiofilmApp(customtkinter.CTk):
             #make new FileLoader object, passing in file contents string. 
             fl = FileLoader.FileLoader(file_contents)
             #This function loads the file's params into self.params, and makes the solute/partuculate objects and the yxs matrix
-            solutes, particulates, yxs = fl.saveDataToStructures(self.params, self.SoluteSOF, self.ParticulateSOF)
+            solutes, particulates, yxs, dependancy_matrix, mu_max_list = fl.saveDataToStructures(self.params, self.SoluteSOF, self.ParticulateSOF, self.reactionSF)
             self.solutes_arr = solutes
             self.SoluteSOF.loadFrames(solutes)
             self.particulates_arr = particulates
             self.ParticulateSOF.loadFrames(particulates)
             self.params["yield_coefficients"] = yxs
+            self.dependancies = dependancy_matrix
+            self.mu_max_list = mu_max_list
 
 
     def clearParameterFrame(self):
@@ -239,7 +243,7 @@ class BiofilmApp(customtkinter.CTk):
     
 
     def init_reaction_frame(self):
-        self.reactionSF = ReactionFrame.ReactionFrame(self.reaction_frame, self.params, self.solutes_arr, self.particulates_arr,height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50) #ReactionSF = reactionScrollableFrame
+        self.reactionSF = ReactionFrame.ReactionFrame(self.reaction_frame, self.params, self.solutes_arr, self.particulates_arr,dependancies=self.dependancies, mu_max_list=self.mu_max_list, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50) #ReactionSF = reactionScrollableFrame
         self.reactionSF.grid(row = 0, column = 0)
 
 
@@ -281,6 +285,7 @@ class BiofilmApp(customtkinter.CTk):
 
     def reaction_button_func(self):
         self.menuButtonPress(button_index=4)
+        self.reactionSF.init_reaction_frame(self.particulates_arr, self.solutes_arr)
         #self.reactionSF.initReactionFrame(self.particulates_arr, self.solutes_arr)
         self.reaction_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3)        
         #self.reactionSF.update() 

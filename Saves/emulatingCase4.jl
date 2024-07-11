@@ -27,7 +27,10 @@ p = (
 			(S,X,Lf,t,z,p) ->0,  #SOB
 			(S,X,Lf,t,z,p) ->0,  #SRB
 			(S,X,Lf,t,z,p) ->0,  #Dead Bacteria
+                  
 ],
+
+
 
             # ----------------- #
             # Solute Parameters #

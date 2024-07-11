@@ -1,5 +1,6 @@
 import customtkinter
 import StoichiometryGrid
+import Dependancy
 import numpy as np
 
 
@@ -12,9 +13,11 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         self.params = params
         self.solute_arr = solutes
         self.particulate_arr = particulates
+        self.dependancy_matrix = dependancies
+        self.mu_max_list = mu_max_list
         
 
-    def initReactionFrame(self, particulates, solutes):
+    def init_reaction_frame(self, particulates, solutes):
         self.particulate_arr = particulates
         self.solute_arr = solutes
         #initialize and grid frame for stoichiometry 
@@ -24,7 +27,8 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
 
         #define dependancy_matrix. This will hold a 2d np array of 'Dependancy' objects, as defined at the end of this file. 
         #Rows are particulates, and columns are solutes. ex. row 1 col 2 represents the dependancy of particulate 1 on solute 2
-        self.dependancy_matrix = np.empty((len(self.particulate_arr), len(self.solute_arr)), dtype=Dependancy.Dependancy())
+        if self.dependancy_matrix is None:
+            self.dependancy_matrix = np.empty((len(self.particulate_arr), len(self.solute_arr)), dtype=Dependancy.Dependancy)
 
         #initialize and grid frame for kinetics 
         self.kineticsFrame = customtkinter.CTkFrame(self) #make new child frame for kinetics section
@@ -77,7 +81,7 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         #this 'comment' will contain the information of each dependancy, and this will be placed in the save file as a comment,
         # so Biofilm.jl will ignore it. This information will be used during the file loading process to populate the kinetics
         # fields. This is a workaround so that I don't have to parse the 'mu' string described in the comment at the top of this function.
-        comment = '     #===Kinetics===\n'
+        comment = '     #===Kinetics===#\n'
         comment += self.get_mu_max_string()
         row_index = 0
         for row in self.dependancy_matrix: #each row represents a particulate
@@ -121,7 +125,8 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
                     string += ' * '
                 
                 else:
-                    next_comment_line = '       #, zero\n'
+                    next_comment_line = '       #, none, {}, {}\n'
+                    comment += next_comment_line.format(str(row_index), str(solute_index))
 
                 # add +1 to index
                 solute_index += 1
@@ -136,7 +141,7 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
 
             kinetics_arr[row_index] = string
             row_index += 1
-        comment += '        #===End_Kinetics===\n'
+        comment += '        #===End_Kinetics===#\n'
         print(kinetics_arr)
         return kinetics_arr, comment
 
@@ -172,7 +177,7 @@ class Kinetic(customtkinter.CTkFrame): #one kinetic object represents one partic
         for solute in self.solutes:
             #Make new 'Dependancy' object for each solute, store it in dependancy_matrix 
             
-            self.dependancy_matrix[self.index][solute_index] = Dependancy(self, 'zero', "", row, self.muMax) #update link to matrix
+            self.dependancy_matrix[self.index][solute_index] = Dependancy.Dependancy(self, 'zero', "", row, self.muMax) #update link to matrix
 
             #make and grid label indicating solute name
             label = customtkinter.CTkLabel(self, text = "Dependance on: S" + str(row-1) + " (" + solute.getParams()['name'].get() + ")")

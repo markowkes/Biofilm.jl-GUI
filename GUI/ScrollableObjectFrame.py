@@ -60,15 +60,16 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
                          "pbo": customtkinter.StringVar(value=0.0),
                          "rho": customtkinter.StringVar(value=0.0)}
         if self.is_solute:
-            new_frame = SoluteObjectFrame.ObjectFrame(self, frame_params, len(self.frame_list))
+            new_frame = SoluteObjectFrame.ObjectFrame(self, frame_params, index = len(self.frame_list))
         else:
-             new_frame = ParticulateObjectFrame.ObjectFrame(self, frame_params, len(self.frame_list))
+             new_frame = ParticulateObjectFrame.ObjectFrame(self, frame_params, index = len(self.frame_list))
         self.YxsHelper()
         #new_frame.bind('<Unmap>', command = lambda event: self.deleteFrame(new_frame.index))
         self.frame_list.append(new_frame)
         self.drawFrame()
 
 
-    def loadFrames(self):
-        pass
+    def loadFrames(self, frame_list):
+        self.frame_list = frame_list
+        self.drawFrames()
         
