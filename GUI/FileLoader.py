@@ -3,9 +3,11 @@ import numpy as np
 import SoluteObjectFrame
 import ParticulateObjectFrame
 import customtkinter
+import Dependancy
 
 class FileLoader():
     def __init__(self, file_content):
+        self.file_content = file_content
         file_parameters = self.parse_parameters(file_content)
 
         #print(file_parameters)
@@ -31,27 +33,49 @@ class FileLoader():
         return parameters
     
 
-    def parse_kinetics_comment(self, file_content):
-        start = file_content.find("===Kinetics===", start = 900)
-        if start == -1:
-            print("error: cannot find '===Kinetics===' comment in save file.")
+    def parse_kinetics_comment(self, solute_count, particulate_count, reaction_frame):
+        #Create matrix of correct dimensions (solute_count x particulate_count) where all values are None
+        dependancy_matrix = np.full(shape=(solute_count, particulate_count), fill_value=None, dtype=Dependancy.Dependancy)
+        mu_max_list = None
 
-        end = file_content.find("===End_Kinetics===", start = start)
+        start = self.file_content.find("===Kinetics===", 900)
+        if start == -1:
+            print("note: cannot find '===Kinetics===' comment in save file.")
+            return dependancy_matrix, mu_max_list
+
+        end = self.file_content.find("===End_Kinetics===", start)
         if end == -1:
-            print("error: cannot find '===End_Kinetics===' comment in save file.")
+            print("note: cannot find '===End_Kinetics===' comment in save file.")
+            return dependancy_matrix, mu_max_list
         
         # get a substring which is only the kinetics comment
-        substring = file_content[start:end]
+        substring = self.file_content[start:end]
         # split into list of lines
         lines = substring.splitlines()
         for line in lines:
-            #each line represents a kinetic (dependancy). is of the format: type (monod/inhibition), particulate_index, solute_index, Ki/Km OR 'zero'
+            #each line represents a kinetic (dependancy). is of the format: type (monod/inhibition), particulate_index, solute_index, Ki/Km OR 'none', particulate_index, solute_index
             comma_separated_values = line.split(', ')
 
+            #the first line will be a list of mu maxs, as strings, and the first item in the string will just be a '#' so Julia doesn't read it.
+            if mu_max_list == None:
+                mu_max_list = [int(item) for item in comma_separated_values[1:]]
+                continue #skip to next loop iteration
+
+            type = comma_separated_values[1]
+            particulate_index = comma_separated_values[2]
+            solute_index = comma_separated_values[3]
+
+            if type.lower() == 'none':
+                dependancy_matrix[particulate_index][solute_index] = Dependancy.Dependancy(parent=reaction_frame, type = type, param = customtkinter.StringVar(), row = particulate_index, muMax=mu_max_list[particulate_index])
+            else:
+                param = comma_separated_values[4]
+                dependancy_matrix[particulate_index][solute_index] = Dependancy.Dependancy(parent=reaction_frame, type = type, param = customtkinter.StringVar(value=param), row = particulate_index, muMax=mu_max_list[particulate_index])
+        
+        return dependancy_matrix, mu_max_list
 
 
 
-    def saveDataToStructures(self, params, solutes_scrollable_object_frame, particulates_scrollable_object_frame):
+    def saveDataToStructures(self, params, solutes_scrollable_object_frame, particulates_scrollable_object_frame, reaction_frame):
         #This function will...
         solute_objects = []
         particulate_objects = []
@@ -115,7 +139,7 @@ class FileLoader():
                             "dt": customtkinter.StringVar(value = Dt[solute_index]),
                             "db": customtkinter.StringVar(value = Db[solute_index]),
                             "Sin": edited_Sin[solute_index]}
-            new_frame = SoluteObjectFrame.ObjectFrame(solutes_scrollable_object_frame, frame_params) 
+            new_frame = SoluteObjectFrame.ObjectFrame(solutes_scrollable_object_frame, frame_params, solute_index) 
             solute_objects.append(new_frame)
 
         #make particulate objects with correct parameters, place in 'particulate_objects' list to be returned
@@ -125,10 +149,12 @@ class FileLoader():
                             "pbo": customtkinter.StringVar(value = Pbo[particulate_index]),
                             "rho": customtkinter.StringVar(value = rho[particulate_index]),
                             "srcX": edited_srcX[particulate_index]} #TODO: this srcX is not being used currently, this would be in the interactions part of reaction menus
-            new_frame = ParticulateObjectFrame.ObjectFrame(particulates_scrollable_object_frame, frame_params) 
+            new_frame = ParticulateObjectFrame.ObjectFrame(particulates_scrollable_object_frame, frame_params, particulate_index) 
             particulate_objects.append(new_frame)
 
-        return solute_objects, particulate_objects, Yxs
+        dependancy_matrix, mu_max_list = self.parse_kinetics_comment(solute_count=col_count, particulate_count=row_count, reaction_frame=reaction_frame)
+
+        return solute_objects, particulate_objects, Yxs, dependancy_matrix, mu_max_list
 
 
     
