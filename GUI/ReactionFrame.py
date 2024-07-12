@@ -8,32 +8,57 @@ import numpy as np
 
 #Class for the 'Reactions' menu
 class ReactionFrame(customtkinter.CTkScrollableFrame):
-    def __init__(self, parent, params, solutes, particulates, dependancies, mu_max_list, *args, **kwargs): #takes in pointer to parent frame, the parameters dictionary, the array of soluteObjectFrames, and the array of ParticulateObjectFrames.
+    def __init__(self, parent, params, solutes, particulates, dependancies, *args, **kwargs): #takes in pointer to parent frame, the parameters dictionary, the array of soluteObjectFrames, and the array of ParticulateObjectFrames.
         super().__init__(parent, *args, **kwargs)
         self.params = params
         self.solute_arr = solutes
         self.particulate_arr = particulates
-        self.dependancy_matrix = dependancies
-        self.mu_max_list = mu_max_list
+        self.dependancy_str = dependancies
+
+        self.init_reaction_frame()
         
 
-    def init_reaction_frame(self, particulates, solutes):
-        self.particulate_arr = particulates
-        self.solute_arr = solutes
+    def init_reaction_frame(self):
         #initialize and grid frame for stoichiometry 
         self.StoichFrame = customtkinter.CTkFrame(self)
         self.StoichFrame.grid(row = 1, column = 0) 
         self.initStoichGrid()
 
-        #define dependancy_matrix. This will hold a 2d np array of 'Dependancy' objects, as defined at the end of this file. 
-        #Rows are particulates, and columns are solutes. ex. row 1 col 2 represents the dependancy of particulate 1 on solute 2
-        if self.dependancy_matrix is None:
-            self.dependancy_matrix = np.empty((len(self.particulate_arr), len(self.solute_arr)), dtype=Dependancy.Dependancy)
-
         #initialize and grid frame for kinetics 
         self.kineticsFrame = customtkinter.CTkFrame(self) #make new child frame for kinetics section
         self.kineticsFrame.grid(row=3, column = 0, pady = 20)
         self.initKinetics()
+
+        rows = len(self.particulate_arr)
+        cols = len(self.solute_arr)
+
+        #First, handle mu_max_list. If it is None, create new list with default values.
+        if self.dependancy_str is None:
+            self.mu_max_list = [customtkinter.StringVar(value='0.0') for _ in range(rows)]
+        else:
+            comma_separated_values = self.dependancy_str[0].split(', ')
+            self.mu_max_list = [customtkinter.StringVar(value = item) for item in comma_separated_values[1:]]
+
+        #define dependancy_matrix. This will hold a 2d np array of 'Dependancy' objects, as defined at the end of this file. 
+        #Rows are particulates, and columns are solutes. ex. row 1 col 2 represents the dependancy of particulate 1 on solute 2
+        self.dependancy_matrix = np.empty((rows, cols), dtype=Dependancy.Dependancy)
+
+        for r in range(rows):
+            for c in range(cols):
+                self.dependancy_matrix[r][c] = Dependancy.Dependancy(parent = self.kinetics[r], type = 'zero', param = '0', row = r, muMax = self.mu_max_list[r])
+
+        if self.dependancy_str is not None:
+            for line in self.dependancy_str[1:]:
+                #each line represents a kinetic (dependancy). is of the format: type (monod/inhibition), particulate_index, solute_index, Ki/Km OR 'none', particulate_index, solute_index
+                comma_separated_values = line.split(', ')
+
+                type = comma_separated_values[1]
+                particulate_index = comma_separated_values[2]
+                solute_index = comma_separated_values[3]
+
+                if type.lower() != 'none':
+                    param = comma_separated_values[4]
+                    self.dependancy_matrix[particulate_index][solute_index] = Dependancy.Dependancy(parent = self.kinetics[particulate_index], type = type, param = customtkinter.StringVar(value=param), row = particulate_index, muMax=self.mu_max_list[particulate_index])
 
 
     def initStoichGrid(self): #At the top of the reaction frame is the stoichiometry grid, which contains the yield coeffcients for our solutes/particulates
@@ -56,7 +81,7 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         self.kinetics = []
         for index in range(len(self.particulate_arr)):
             par = self.particulate_arr[index]
-            k = Kinetic(self.kineticsFrame, par, self.solute_arr, self.dependancy_matrix, index)
+            k = Kinetic(self.kineticsFrame, par, self.solute_arr, self.dependancy_matrix, self.mu_max_list[index],  index)
             self.kinetics.append(k)
             k.grid(row=index, column = 0)
 
@@ -151,15 +176,16 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
     # - call reactionFrame with appropriate info in FileLoader.
             
 
+
 class Kinetic(customtkinter.CTkFrame): #one kinetic object represents one particulate
-    def __init__(self, parent, particulate, solutes, dependancy_matrix, index):
+    def __init__(self, parent, particulate, solutes, dependancy_matrix, muMax, index):
         super().__init__(parent)
         self.particulate = particulate
         self.params = particulate.getParams()
         self.solutes = solutes
         self.dependancy_matrix = dependancy_matrix
         self.index = index
-        self.muMax = customtkinter.StringVar(value='0.0')
+        self.muMax = muMax
         self.initFrame()
 
 
@@ -174,10 +200,20 @@ class Kinetic(customtkinter.CTkFrame): #one kinetic object represents one partic
         
         row = 2 
         solute_index = 0
+
+        if self.dependancy_matrix == None:
+            build_empty = True
+        else:
+            build_empty = False
+
         for solute in self.solutes:
             #Make new 'Dependancy' object for each solute, store it in dependancy_matrix 
             
-            self.dependancy_matrix[self.index][solute_index] = Dependancy.Dependancy(self, 'zero', "", row, self.muMax) #update link to matrix
+            if build_empty == True:
+                self.dependancy_matrix[self.index][solute_index] = Dependancy.Dependancy(self, 'zero', "", row, self.muMax) #update link to matrix
+            else:
+
+                self.dependancy_matrix[self.index][solute_index].gridEntry()
 
             #make and grid label indicating solute name
             label = customtkinter.CTkLabel(self, text = "Dependance on: S" + str(row-1) + " (" + solute.getParams()['name'].get() + ")")

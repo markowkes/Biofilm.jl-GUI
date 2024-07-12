@@ -36,29 +36,29 @@ class FileLoader():
     def parse_kinetics_comment(self, solute_count, particulate_count, reaction_frame):
         #Create matrix of correct dimensions (solute_count x particulate_count) where all values are None
         dependancy_matrix = np.full(shape=(solute_count, particulate_count), fill_value=None, dtype=Dependancy.Dependancy)
-        mu_max_list = None
 
         start = self.file_content.find("===Kinetics===", 900)
         if start == -1:
             print("note: cannot find '===Kinetics===' comment in save file.")
-            return dependancy_matrix, mu_max_list
+            return dependancy_matrix
 
         end = self.file_content.find("===End_Kinetics===", start)
         if end == -1:
             print("note: cannot find '===End_Kinetics===' comment in save file.")
-            return dependancy_matrix, mu_max_list
+            return dependancy_matrix
         
         # get a substring which is only the kinetics comment
         substring = self.file_content[start:end]
         # split into list of lines
-        lines = substring.splitlines()
+        dependancy_strings = substring.splitlines()
+        '''
         for line in lines:
             #each line represents a kinetic (dependancy). is of the format: type (monod/inhibition), particulate_index, solute_index, Ki/Km OR 'none', particulate_index, solute_index
             comma_separated_values = line.split(', ')
 
-            #the first line will be a list of mu maxs, as strings, and the first item in the string will just be a '#' so Julia doesn't read it.
+            #the first line will be a list of mu maxs, as stringVars, and the first item in the string will just be a '#' so Julia doesn't read it.
             if mu_max_list == None:
-                mu_max_list = [int(item) for item in comma_separated_values[1:]]
+                mu_max_list = [customtkinter.StringVar(value = item) for item in comma_separated_values[1:]]
                 continue #skip to next loop iteration
 
             type = comma_separated_values[1]
@@ -70,8 +70,8 @@ class FileLoader():
             else:
                 param = comma_separated_values[4]
                 dependancy_matrix[particulate_index][solute_index] = Dependancy.Dependancy(parent=reaction_frame, type = type, param = customtkinter.StringVar(value=param), row = particulate_index, muMax=mu_max_list[particulate_index])
-        
-        return dependancy_matrix, mu_max_list
+        '''
+        return dependancy_strings
 
 
 
@@ -152,9 +152,9 @@ class FileLoader():
             new_frame = ParticulateObjectFrame.ObjectFrame(particulates_scrollable_object_frame, frame_params, particulate_index) 
             particulate_objects.append(new_frame)
 
-        dependancy_matrix, mu_max_list = self.parse_kinetics_comment(solute_count=col_count, particulate_count=row_count, reaction_frame=reaction_frame)
+        dependancy_string = self.parse_kinetics_comment(solute_count=col_count, particulate_count=row_count, reaction_frame=reaction_frame)
 
-        return solute_objects, particulate_objects, Yxs, dependancy_matrix, mu_max_list
+        return solute_objects, particulate_objects, Yxs, dependancy_string
 
 
     
