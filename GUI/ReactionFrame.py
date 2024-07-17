@@ -16,6 +16,10 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         self.dependancy_str = dependancies
 
         self.init_reaction_frame()
+
+
+    def force_update(self):
+        self.StoichGrid.createLabels()
         
 
     def init_reaction_frame(self):
@@ -66,8 +70,7 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         label.cget("font").configure(size=20)
         label.grid(row = 0, column = 0)       
 
-        Yxs = self.params['yield_coefficients']
-        self.StoichGrid = StoichiometryGrid.StoichiometryGrid(self.StoichFrame, Yxs, rows = len(self.particulate_arr), columns = len(self.solute_arr), solutes = self.solute_arr, particulates=self.particulate_arr)
+        self.StoichGrid = StoichiometryGrid.StoichiometryGrid(self.StoichFrame, self.params, rows = len(self.particulate_arr), columns = len(self.solute_arr), solutes = self.solute_arr, particulates=self.particulate_arr)
         self.StoichGrid.grid(row = 1, column = 1) #place the stoich grid in the stoich frame
 
 
@@ -84,6 +87,16 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
             k = Kinetic(self.kineticsFrame, par, self.solute_arr, self.dependancy_matrix, self.mu_max_list[index],  index)
             self.kinetics.append(k)
             k.grid(row=index, column = 0)
+
+
+    def add_object(self, scrollable_object_frame, is_solute):
+        #update stoich grid:
+        self.StoichGrid.add_object(scrollable_object_frame, is_solute)
+
+
+    def delete_object(self, scrollable_object_frame, is_solute, index):
+        #update stoich grid:
+        self.StoichGrid.delete_object(scrollable_object_frame, is_solute, index)
 
     
     def get_mu_max_string(self): 
@@ -156,8 +169,6 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
                 # add +1 to index
                 solute_index += 1
             
-
-
             if non_zero_dependancy_present == False:
                 string += "0.0"
             else:

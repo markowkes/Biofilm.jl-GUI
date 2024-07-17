@@ -16,6 +16,10 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
         add_frame_button.grid(row = 0, column = 0, sticky = "w", ipadx = 20)
         if len(frame_list) > 0:
             self.loadFrames()
+
+        
+    def add_reaction_frame_reference(self, reactionSF):
+        self.reactionSF = reactionSF
     
 
     def drawFrames(self):
@@ -31,7 +35,15 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
 
 
     def deleteFrame(self, index):
-        self.frame_list.pop(index)
+        object = self.frame_list.pop(index)
+
+        #update reactions menu
+        self.reactionSF.delete_object(object, self.is_solute, index)
+
+        if self.is_solute: #deleting a column
+            np.delete(self.params['yield_coefficients'], index, axis=1)
+        else: #deleting a row
+            np.delete(self.params['yield_coefficients'], index, axis=0)        
 
 
     def YxsHelper(self): #This funciton adds rows/columns of zeros to the Yxs matrix as new frames are added.
@@ -62,11 +74,14 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
         if self.is_solute:
             new_frame = SoluteObjectFrame.ObjectFrame(self, frame_params, index = len(self.frame_list))
         else:
-             new_frame = ParticulateObjectFrame.ObjectFrame(self, frame_params, index = len(self.frame_list))
+            new_frame = ParticulateObjectFrame.ObjectFrame(self, frame_params, index = len(self.frame_list))
         self.YxsHelper()
         #new_frame.bind('<Unmap>', command = lambda event: self.deleteFrame(new_frame.index))
         self.frame_list.append(new_frame)
         self.drawFrame()
+        
+        #update the reactions menu
+        self.reactionSF.add_object(new_frame, self.is_solute)
 
 
     def loadFrames(self, frame_list):
