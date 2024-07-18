@@ -12,8 +12,8 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
         self.params = params
         self.is_solute = is_solute
         self.frame_list = frame_list
-        add_frame_button = customtkinter.CTkButton(self, text = "Add New", command = self.addEmptyFrame, height=40)
-        add_frame_button.grid(row = 0, column = 0, sticky = "w", ipadx = 20)
+        self.add_frame_button = customtkinter.CTkButton(self, text = "Add New", command = self.addEmptyFrame, height=40)
+        self.add_frame_button.grid(row = 0, column = 0, sticky = "w", ipadx = 20)
         if len(frame_list) > 0:
             self.loadFrames()
 
@@ -43,7 +43,13 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
         if self.is_solute: #deleting a column
             np.delete(self.params['yield_coefficients'], index, axis=1)
         else: #deleting a row
-            np.delete(self.params['yield_coefficients'], index, axis=0)        
+            np.delete(self.params['yield_coefficients'], index, axis=0)
+        
+        #to ensure the row the objects are 'gridded' on is the same as their index, regrid all objects.
+        for child in self.winfo_children():
+            if child != self.add_frame_button:
+                child.grid_forget()
+        self.drawFrames()        
 
 
     def YxsHelper(self): #This funciton adds rows/columns of zeros to the Yxs matrix as new frames are added.

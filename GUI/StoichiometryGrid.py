@@ -49,8 +49,6 @@ class StoichiometryGrid(customtkinter.CTkFrame):
 
 
     def delete_object(self, object, is_solute, index):
-        print("deleting")
-
         if is_solute: #destroy column
             self.entries = np.delete(self.entries, index, axis=1)
             self.stringvars = np.delete(self.stringvars, index, axis=1)
