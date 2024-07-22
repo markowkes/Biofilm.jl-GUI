@@ -150,9 +150,14 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
             self.dependancy_matrix = np.delete(self.dependancy_matrix, index, axis=0)
             self.update_kinetics_dependancy_matrix_reference()
 
+            #remove the kinetic object from the kinetics array, and destroy it, which ungrids it and its children (Dependancies, etc.)
             k = self.kinetics.pop(index)
             k.destroy()
-            
+
+            #regrid kinetics, so that when new particulates are added after deletions have happened, they are on the correct grid rows
+            for i, kinetic in enumerate(self.kinetics):
+                kinetic.grid_forget()
+                kinetic.grid(row = i, column = 0)
 
 
     def update_kinetics_dependancy_matrix_reference(self):
