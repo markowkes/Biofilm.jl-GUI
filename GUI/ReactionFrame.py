@@ -20,6 +20,8 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
 
     def force_update(self):
         self.StoichGrid.createLabels()
+        for k in self.kinetics:
+            k.update_labels()
         
 
     def init_reaction_frame(self):
@@ -83,8 +85,8 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         #initialize and grid kinetics frame object for each particulate (kinetics object defined below)
         self.kinetics = []
         for index in range(len(self.particulate_arr)):
-            par = self.particulate_arr[index]
-            k = Kinetic(self.kineticsFrame, par, self.solute_arr, self.dependancy_matrix, self.mu_max_list[index],  index)
+            particulate = self.particulate_arr[index]
+            k = Kinetic(self.kineticsFrame, particulate, self.solute_arr, self.dependancy_matrix, self.mu_max_list[index],  index)
             self.kinetics.append(k)
             k.grid(row=index, column = 0)
 
@@ -92,13 +94,72 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
     def add_object(self, scrollable_object_frame, is_solute):
         #update stoich grid:
         self.StoichGrid.add_object(scrollable_object_frame, is_solute)
+        self.mu_max_list.append(customtkinter.StringVar(value='0.0'))
+        #Handling adding a solute:
+        if is_solute and len(self.particulate_arr) > 0:
+            index = len(self.solute_arr)
+            #add new column to dependancy matrix:
+            new_column = [Dependancy.Dependancy(self.kinetics[i], 'zero', "", index + 2, self.mu_max_list[i]) for i in range(len(self.particulate_arr))]
+
+            #when the first solute is added, the dependancy matrix will be of shape (0,0), so adding the column to it causes an error.
+            if len(self.solute_arr) == 1:
+                self.dependancy_matrix = np.array(new_column)
+            else:
+                self.dependancy_matrix = np.c_[self.dependancy_matrix, np.array(new_column).reshape(-1, 1)]
+
+            for k in self.kinetics:
+                #make and grid label indicating solute name
+                k.add_label(scrollable_object_frame, index + 2)
+        
+        #Handling adding a particulate, which just adds a new kinetic object
+        elif not is_solute:
+            index = len(self.particulate_arr) -1
+
+            k = Kinetic(self.kineticsFrame, self.particulate_arr[index], self.solute_arr, self.dependancy_matrix, self.mu_max_list[index],  index)
+            self.kinetics.append(k)
+            k.grid(row=index, column = 0)
+            #When a new kinetic is made, it adds the new row of dependancies to its own dependancy matrix.
+            #We now need to update the ReactionFrame's dependancy_matrix reference to this updated version.
+            self.dependancy_matrix = k.dependancy_matrix
+        
+        print(self.dependancy_matrix.shape) 
 
 
     def delete_object(self, scrollable_object_frame, is_solute, index):
         #update stoich grid:
         self.StoichGrid.delete_object(scrollable_object_frame, is_solute, index)
 
-    
+        if is_solute: #deleting a solute
+            #destroy dependancy objects in column. This will ungrid them.
+            for dependancy in self.dependancy_matrix[:, index]:
+                dependancy.destroy()
+
+            for k in self.kinetics:
+                k.delete_solute(index)
+
+            #update dependancy matrix (delete column)
+            self.dependancy_matrix = np.delete(self.dependancy_matrix, index, axis=1) 
+            self.update_kinetics_dependancy_matrix_reference()
+        
+        else: #deleting a particulate
+            #destroy dependancy objects in row. This will ungrid them.
+            for dependancy in self.dependancy_matrix[index, :]:
+                dependancy.destroy()
+
+            #update dependancy matrix (delete row)
+            self.dependancy_matrix = np.delete(self.dependancy_matrix, index, axis=0)
+            self.update_kinetics_dependancy_matrix_reference()
+
+            k = self.kinetics.pop(index)
+            k.destroy()
+            
+
+
+    def update_kinetics_dependancy_matrix_reference(self):
+        for k in self.kinetics:
+            k.depencancy_matrix = self.dependancy_matrix
+
+
     def get_mu_max_string(self): 
         # This function will take the 'muMax' value for all of the particulates and put it in a comma-separated string, to be put in the save file
         mu_max_string = '       #, '
@@ -197,43 +258,61 @@ class Kinetic(customtkinter.CTkFrame): #one kinetic object represents one partic
         self.dependancy_matrix = dependancy_matrix
         self.index = index
         self.muMax = muMax
+        self.labels = []
         self.initFrame()
 
 
     def initFrame(self):
         #initialize and grid elements for particulate title + muMax entry box and its label.
-        name = customtkinter.CTkLabel(master=self, text="Growth of " + self.params["name"].get())
-        name.grid(row = 0, column = 0)
+        self.name_label = customtkinter.CTkLabel(master=self, text="Growth of " + self.params["name"].get())
+        self.name_label.grid(row = 0, column = 0)
         muMaxLabel = customtkinter.CTkLabel(master=self, text = "Mu Max")
         muMaxLabel.grid(row = 1, column = 0)
         muMaxEntry = customtkinter.CTkEntry(master=self, textvariable=self.muMax)
         muMaxEntry.grid(row = 1, column = 1)
-        
-        row = 2 
-        solute_index = 0
 
-        if self.dependancy_matrix == None:
-            build_empty = True
-        else:
-            build_empty = False
 
-        for solute in self.solutes:
+        #Create solute dependancies - each solute gets a label, and a dependancy object - which gets placed on grid when it is created.
+        row = 2
+        new_row = [] 
+
+        for i, solute in enumerate(self.solutes):
             #Make new 'Dependancy' object for each solute, store it in dependancy_matrix 
-            
-            if build_empty == True:
-                self.dependancy_matrix[self.index][solute_index] = Dependancy.Dependancy(self, 'zero', "", row, self.muMax) #update link to matrix
+            new_row.append(Dependancy.Dependancy(self, 'zero', "", i + 2, self.muMax))                
+
+            #make and grid label indicating solute name
+            self.add_label(solute, row = i + 2) #add 2 to j because the dependancies start at row 2 (row 0 is name_label and row 1 is the muMax label/entry)
+        if len(new_row) > 0:
+            if self.index == 0:
+                self.dependancy_matrix = np.array(new_row)
             else:
+                self.dependancy_matrix = np.vstack((self.dependancy_matrix, np.array(new_row)))
 
-                self.dependancy_matrix[self.index][solute_index].gridEntry()
 
+    def add_label(self, solute, row):
             #make and grid label indicating solute name
             label = customtkinter.CTkLabel(self, text = "Dependance on: S" + str(row-1) + " (" + solute.getParams()['name'].get() + ")")
             label.grid(row = row, column = 1, pady = 3)
+            self.labels.append(label)
 
-            row += 1
-            solute_index += 1
-        #print("")
-            
+
+    def update_labels(self):
+        for index, label in enumerate(self.labels):
+            label.configure(text = "Dependance on: S" + str(index + 1) + " (" + self.solutes[index].getParams()['name'].get() + ")" )
+        
+        self.name_label.configure(text="Growth of " + self.params["name"].get())
+
+
+    #make delete_solute function on Kinetic which:
+        # regrid labels, menu options, entries 
+
+    def delete_solute(self, index):
+        #delete label
+        l = self.labels.pop(index)
+        l.destroy()
+
+        #regrid...
+
 
     def setMuMax(self, val):
         self.muMax = val
