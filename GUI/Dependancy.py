@@ -18,8 +18,8 @@ class Dependancy():
         self.optionmenu.grid(row=row, column = 2, padx = 3)
 
         #initialize and grid a spacer - this will be to the right of the dropdown and will be replaced with the param box if needed.
-        spacer = customtkinter.CTkLabel(self.parent, text="")
-        spacer.grid(row = row, column = 3, columnspan=2)
+        self.spacer = customtkinter.CTkLabel(self.parent, text="")
+        self.spacer.grid(row = row, column = 3, columnspan=2)
 
 
     def update_layout(self, choice): 
@@ -44,4 +44,11 @@ class Dependancy():
     
     def get(self):
         return self.type.get(), self.param.get(), self.muMax.get()
+
+
+    def destroy(self):
+        self.entry.destroy()
+        self.optionmenu.destroy()
+        self.spacer.destroy()
+        del self
         

@@ -12,10 +12,14 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
         self.params = params
         self.is_solute = is_solute
         self.frame_list = frame_list
-        add_frame_button = customtkinter.CTkButton(self, text = "Add New", command = self.addEmptyFrame, height=40)
-        add_frame_button.grid(row = 0, column = 0, sticky = "w", ipadx = 20)
+        self.add_frame_button = customtkinter.CTkButton(self, text = "Add New", command = self.addEmptyFrame, height=40)
+        self.add_frame_button.grid(row = 0, column = 0, sticky = "w", ipadx = 20)
         if len(frame_list) > 0:
             self.loadFrames()
+
+        
+    def add_reaction_frame_reference(self, reactionSF):
+        self.reactionSF = reactionSF
     
 
     def drawFrames(self):
@@ -31,7 +35,21 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
 
 
     def deleteFrame(self, index):
-        self.frame_list.pop(index)
+        object = self.frame_list.pop(index)
+
+        #update reactions menu
+        self.reactionSF.delete_object(object, self.is_solute, index)
+
+        if self.is_solute: #deleting a column
+            np.delete(self.params['yield_coefficients'], index, axis=1)
+        else: #deleting a row
+            np.delete(self.params['yield_coefficients'], index, axis=0)
+        
+        #to ensure the row the objects are 'gridded' on is the same as their index, regrid all objects.
+        for child in self.winfo_children():
+            if child != self.add_frame_button:
+                child.grid_forget()
+        self.drawFrames()        
 
 
     def YxsHelper(self): #This funciton adds rows/columns of zeros to the Yxs matrix as new frames are added.
@@ -62,11 +80,14 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
         if self.is_solute:
             new_frame = SoluteObjectFrame.ObjectFrame(self, frame_params, index = len(self.frame_list))
         else:
-             new_frame = ParticulateObjectFrame.ObjectFrame(self, frame_params, index = len(self.frame_list))
+            new_frame = ParticulateObjectFrame.ObjectFrame(self, frame_params, index = len(self.frame_list))
         self.YxsHelper()
         #new_frame.bind('<Unmap>', command = lambda event: self.deleteFrame(new_frame.index))
         self.frame_list.append(new_frame)
         self.drawFrame()
+        
+        #update the reactions menu
+        self.reactionSF.add_object(new_frame, self.is_solute)
 
 
     def loadFrames(self, frame_list):

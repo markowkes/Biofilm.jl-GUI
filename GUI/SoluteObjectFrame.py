@@ -70,5 +70,9 @@ class ObjectFrame(customtkinter.CTkFrame):
         return self.params["name"].get()
     
 
+    def getStringVar(self):
+        return self.params['name']
+    
+
     def getInflowParams(self):
         return self.graph_frame.getParams()

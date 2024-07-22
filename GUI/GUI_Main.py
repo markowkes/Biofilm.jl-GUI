@@ -4,7 +4,6 @@ import tkinter as tk
 from tkinter import filedialog
 import numpy as np
 import threading
-#from juliacall import main as jl
 
 import customtkinter
 import CTkMenuBar
@@ -67,8 +66,7 @@ class BiofilmApp(customtkinter.CTk):
         self.params = self.initialize_parameters()
         self.particulates_arr = []
         self.solutes_arr = []
-        self.dependancies = None
-        self.mu_max_list = []
+        self.dependancy_string = None
 
         self.create_menu()
         self.appFrame.pack() #because the menu bar, which holds the 'file' button ect. uses the 'pack' placement method, a frame for the whole app must also be packed if the 'grid' placement method is to be used.
@@ -171,6 +169,8 @@ class BiofilmApp(customtkinter.CTk):
         self.init_solute_frame()
         self.reaction_frame = customtkinter.CTkFrame(self.parameter_frame, height=self.winfo_screenheight(), width=(4 * self.winfo_screenwidth() / 5) - 60)
         self.init_reaction_frame()
+        self.particulateSOF.add_reaction_frame_reference(self.reactionSF)
+        self.SoluteSOF.add_reaction_frame_reference(self.reactionSF)
         
 
     def save_as(self):
@@ -205,14 +205,13 @@ class BiofilmApp(customtkinter.CTk):
             #make new FileLoader object, passing in file contents string. 
             fl = FileLoader.FileLoader(file_contents)
             #This function loads the file's params into self.params, and makes the solute/partuculate objects and the yxs matrix
-            solutes, particulates, yxs, dependancy_matrix, mu_max_list = fl.saveDataToStructures(self.params, self.SoluteSOF, self.ParticulateSOF, self.reactionSF)
+            solutes, particulates, yxs, dependancy_string = fl.saveDataToStructures(self.params, self.SoluteSOF, self.particulateSOF, self.reactionSF)
             self.solutes_arr = solutes
             self.SoluteSOF.loadFrames(solutes)
             self.particulates_arr = particulates
-            self.ParticulateSOF.loadFrames(particulates)
+            self.particulateSOF.loadFrames(particulates)
             self.params["yield_coefficients"] = yxs
-            self.dependancies = dependancy_matrix
-            self.mu_max_list = mu_max_list
+            self.dependancy_string = dependancy_string
 
 
     def clearParameterFrame(self):
@@ -233,8 +232,8 @@ class BiofilmApp(customtkinter.CTk):
 
 
     def init_particulate_frame(self):
-        self.ParticulateSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.params, self.particulate_frame, self.particulates_arr, False, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
-        self.ParticulateSOF.grid(row = 0, column = 0)
+        self.particulateSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.params, self.particulate_frame, self.particulates_arr, False, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
+        self.particulateSOF.grid(row = 0, column = 0)
 
 
     def init_solute_frame(self):
@@ -243,7 +242,7 @@ class BiofilmApp(customtkinter.CTk):
     
 
     def init_reaction_frame(self):
-        self.reactionSF = ReactionFrame.ReactionFrame(self.reaction_frame, self.params, self.solutes_arr, self.particulates_arr,dependancies=self.dependancies, mu_max_list=self.mu_max_list, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50) #ReactionSF = reactionScrollableFrame
+        self.reactionSF = ReactionFrame.ReactionFrame(self.reaction_frame, self.params, self.solutes_arr, self.particulates_arr, dependancies=self.dependancy_string, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50) #ReactionSF = reactionScrollableFrame
         self.reactionSF.grid(row = 0, column = 0)
 
 
@@ -285,8 +284,7 @@ class BiofilmApp(customtkinter.CTk):
 
     def reaction_button_func(self):
         self.menuButtonPress(button_index=4)
-        self.reactionSF.init_reaction_frame(self.particulates_arr, self.solutes_arr)
-        #self.reactionSF.initReactionFrame(self.particulates_arr, self.solutes_arr)
+        self.reactionSF.force_update()
         self.reaction_frame.grid(row = 0, column = 0, pady = 5, padx = 5, ipadx = 5, ipady = 3)        
         #self.reactionSF.update() 
 
