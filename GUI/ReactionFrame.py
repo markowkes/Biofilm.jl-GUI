@@ -33,7 +33,6 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         #initialize and grid frame for kinetics 
         self.kineticsFrame = customtkinter.CTkFrame(self) #make new child frame for kinetics section
         self.kineticsFrame.grid(row=3, column = 0, pady = 20)
-        self.initKinetics()
 
         rows = len(self.particulate_arr)
         cols = len(self.solute_arr)
@@ -42,19 +41,23 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         if self.dependancy_str is None:
             self.mu_max_list = [customtkinter.StringVar(value='0.0') for _ in range(rows)]
         else:
-            comma_separated_values = self.dependancy_str[0].split(', ')
+            comma_separated_values = self.dependancy_str[1].split(', ')
             self.mu_max_list = [customtkinter.StringVar(value = item) for item in comma_separated_values[1:]]
 
         #define dependancy_matrix. This will hold a 2d np array of 'Dependancy' objects, as defined at the end of this file. 
         #Rows are particulates, and columns are solutes. ex. row 1 col 2 represents the dependancy of particulate 1 on solute 2
         self.dependancy_matrix = np.empty((rows, cols), dtype=Dependancy.Dependancy)
 
+        self.initKinetics()
+
+        #Fill dependancy_matrix with default values first
         for r in range(rows):
             for c in range(cols):
-                self.dependancy_matrix[r][c] = Dependancy.Dependancy(parent = self.kinetics[r], type = 'zero', param = '0', row = r, muMax = self.mu_max_list[r])
-
+                self.dependancy_matrix[r][c] = Dependancy.Dependancy(parent = self.kinetics[r], type = 'zero', param = '0', row = r+2, muMax = self.mu_max_list[r])
+        
         if self.dependancy_str is not None:
-            for line in self.dependancy_str[1:]:
+            for line in self.dependancy_str[2:-1]:
+
                 #each line represents a kinetic (dependancy). is of the format: type (monod/inhibition), particulate_index, solute_index, Ki/Km OR 'none', particulate_index, solute_index
                 comma_separated_values = line.split(', ')
 
@@ -64,7 +67,13 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
 
                 if type.lower() != 'none':
                     param = comma_separated_values[4]
-                    self.dependancy_matrix[particulate_index][solute_index] = Dependancy.Dependancy(parent = self.kinetics[particulate_index], type = type, param = customtkinter.StringVar(value=param), row = particulate_index, muMax=self.mu_max_list[particulate_index])
+                    row = int(particulate_index)
+                    col = int(solute_index)
+                    d = Dependancy.Dependancy(parent = self.kinetics[row], type = type, param = param, row = col+2, muMax=self.mu_max_list[row])
+                    self.dependancy_matrix[row][col] = d
+                    d.gridEntry()
+
+        self.update_kinetics_dependancy_matrix_reference()
 
 
     def initStoichGrid(self): #At the top of the reaction frame is the stoichiometry grid, which contains the yield coeffcients for our solutes/particulates
@@ -122,7 +131,7 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
             #We now need to update the ReactionFrame's dependancy_matrix reference to this updated version.
             self.dependancy_matrix = k.dependancy_matrix
         
-        print(self.dependancy_matrix.shape) 
+        #print(self.dependancy_matrix.shape) 
 
 
     def delete_object(self, scrollable_object_frame, is_solute, index):
@@ -143,12 +152,13 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         
         else: #deleting a particulate
             #destroy dependancy objects in row. This will ungrid them.
-            for dependancy in self.dependancy_matrix[index, :]:
-                dependancy.destroy()
+            if not 0 in self.dependancy_matrix.shape:
+                for dependancy in self.dependancy_matrix[index, :]:
+                    dependancy.destroy()
 
-            #update dependancy matrix (delete row)
-            self.dependancy_matrix = np.delete(self.dependancy_matrix, index, axis=0)
-            self.update_kinetics_dependancy_matrix_reference()
+                #update dependancy matrix (delete row)
+                self.dependancy_matrix = np.delete(self.dependancy_matrix, index, axis=0)
+                self.update_kinetics_dependancy_matrix_reference()
 
             #remove the kinetic object from the kinetics array, and destroy it, which ungrids it and its children (Dependancies, etc.)
             k = self.kinetics.pop(index)
@@ -180,7 +190,7 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         #this function is used in the saveFileBuilder to get the source terms. It builds an array of strings which look like:
         # 'mumax*(S[1]./(KmB1.+S[1])).*(S[3]./(KmB3.+S[3]))' as an example. This goes in the 'mu' variable in the particulate parameters section
         # This string is built here rather than in the SaveFileBuilder because it is more simple.
-        kinetics_arr = np.full(shape=len(self.particulate_arr), fill_value='', dtype='<U256')
+        kinetics_arr = []
 
         #this 'comment' will contain the information of each dependancy, and this will be placed in the save file as a comment,
         # so Biofilm.jl will ignore it. This information will be used during the file loading process to populate the kinetics
@@ -188,6 +198,11 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         comment = '     #===Kinetics===#\n'
         comment += self.get_mu_max_string()
         row_index = 0
+        print(self.dependancy_matrix.shape)
+
+        if self.dependancy_matrix.ndim == 1:
+            self.dependancy_matrix = self.dependancy_matrix.reshape(1, -1)
+
         for row in self.dependancy_matrix: #each row represents a particulate
             string = ""
             solute_index = 0
@@ -236,12 +251,12 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
                 solute_index += 1
             
             if non_zero_dependancy_present == False:
-                string += "0.0"
+                string = "0.0"
             else:
                 #add string to array, trim off last 3 characters which will be ' * '.
                 string = string[:-3]
 
-            kinetics_arr[row_index] = string
+            kinetics_arr.append(string)
             row_index += 1
         comment += '        #===End_Kinetics===#\n'
         print(kinetics_arr)

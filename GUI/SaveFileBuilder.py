@@ -105,7 +105,7 @@ class SaveFileBuilder():
 #NEXT STEP: DEBUG buildMU FUNCTION. particulate on line 110 is just 0... see emulatingCase4.jl lines 26,27
 
     def buildMu(self):
-        kinetics = self.kinetics # this is a np array of strings. length = #of particulates
+        kinetics, comment = self.kinetics # this is a np array of strings. length = #of particulates
         content = ""
         particulate_index = 0
         for particulate in kinetics:
@@ -113,7 +113,7 @@ class SaveFileBuilder():
             content += particulate
             content += ",  #" + self.particulates_arr[particulate_index].getName()
             particulate_index +=1
-        return content + '\n'
+        return content + '\n' + comment + '\n'
 
 
     def buildSin(self): #TODO: fill in Sin with 'inflow' equation
