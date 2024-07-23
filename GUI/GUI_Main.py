@@ -30,12 +30,7 @@ Next step: precompile julia on seperate thread
 
  For 1.0 release:
 kinetics are not loaded from file
-load mu max from file
-    idea 1:
-    save a number to save file with indicates which kind of dependance is used, also save the dependance parameter
-    there could be a number which indicates a custom equation
-    idea 2: parse 'mu' and find the dependancies by hand
-A similar problem occurs for Sin
+load Sin from file
 
 Build a distributable package 
 
@@ -53,9 +48,7 @@ Test distributable across operating systems and screens
 #BUGS: 
 '''
  To be fixed before next release:
-Deleted particulates still show up in reactions menu kinetics section
 must open reactions menu before using 'save as' button
-deleting multiple objects results in pop index out of range, maybe after a delete, update all objects' indices
 scrolling on soluteSOF not working?
 '''
 
@@ -212,6 +205,7 @@ class BiofilmApp(customtkinter.CTk):
             self.particulateSOF.loadFrames(particulates)
             self.params["yield_coefficients"] = yxs
             self.dependancy_string = dependancy_string
+            self.init_reaction_frame()
 
 
     def clearParameterFrame(self):
@@ -232,12 +226,12 @@ class BiofilmApp(customtkinter.CTk):
 
 
     def init_particulate_frame(self):
-        self.particulateSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.params, self.particulate_frame, self.particulates_arr, False, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
+        self.particulateSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.params, self.particulate_frame, self.particulates_arr, False, height = self.winfo_screenheight()-140, width = ((4*self.winfo_screenwidth())/5)-50)
         self.particulateSOF.grid(row = 0, column = 0)
 
 
     def init_solute_frame(self):
-        self.SoluteSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.params, self.solute_frame, self.solutes_arr, True, height = self.winfo_screenheight()-20, width = ((4*self.winfo_screenwidth())/5)-50)
+        self.SoluteSOF = ScrollableObjectFrame.ScrollableObjectFrame(self.params, self.solute_frame, self.solutes_arr, True, height = self.winfo_screenheight()-140, width = ((4*self.winfo_screenwidth())/5)-50)
         self.SoluteSOF.grid(row = 0, column = 0)
     
 
@@ -417,26 +411,6 @@ class BiofilmApp(customtkinter.CTk):
 
         # Now 'output' contains the entire stdout of the subprocess
         return process.returncode, output
-
-        '''
-        try:
-            # Run the Julia script as a subprocess and capture its output
-            completed_process = subprocess.run(['julia', self.params["file_path"]], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            
-            # Access the output and error streams
-            output = completed_process.stdout
-            error = completed_process.stderr
-
-            # Handle the output as needed
-            if output:
-                print("Output:", output)
-            if error:
-                print("Error:", error)
-            return 1, output
-        except subprocess.CalledProcessError as e:
-            print(f"Error running Julia script: {e}")
-            return 0, 0
-        '''
        
 
     def quitting(self, event):

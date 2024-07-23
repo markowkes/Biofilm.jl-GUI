@@ -16,7 +16,14 @@ class FileController():
             with open(file_path, 'w') as f:
                 f.write(content)
                 return file_path
-            
+
+
+    def save(self, content, file_path): #this function will overwrite the whole file.
+        if file_path:
+            with open(file_path, 'w') as f:
+                f.write(content)
+
+
     def getPlotFilenames(self):
         folder_path = "Biofilm.jl-main/savePlots"
 

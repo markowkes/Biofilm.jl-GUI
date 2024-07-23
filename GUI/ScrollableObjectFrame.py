@@ -68,6 +68,9 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
 
 
     def addEmptyFrame(self):
+        #disable 'add new' button while this code is running - prevents the button from being spammed - if the button is pressed again while this function is still running there is unpredictable behavior
+        self.add_frame_button.configure(state = "disabled")
+
         #print("adding new frame. Frame count: " + str(len(self.frame_list)))
         frame_params = {"name": customtkinter.StringVar(value=""),
                          "sto": customtkinter.StringVar(value=0.0),
@@ -88,6 +91,9 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
         
         #update the reactions menu
         self.reactionSF.add_object(new_frame, self.is_solute)
+
+        #re-enable 'add new' button
+        self.add_frame_button.configure(state = "normal")
 
 
     def loadFrames(self, frame_list):
