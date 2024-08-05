@@ -49,11 +49,6 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         self.dependancy_matrix = np.empty((rows, cols), dtype=Dependancy.Dependancy)
 
         self.initKinetics()
-
-        #Fill dependancy_matrix with default values first
-        for r in range(rows):
-            for c in range(cols):
-                self.dependancy_matrix[r][c] = Dependancy.Dependancy(parent = self.kinetics[r], type = 'zero', param = '0', row = r+2, muMax = self.mu_max_list[r])
         
         if self.dependancy_str is not None:
             for line in self.dependancy_str[2:-1]:
@@ -67,10 +62,16 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
 
                 if type.lower() != 'none':
                     param = comma_separated_values[4]
-                    row = int(particulate_index)
-                    col = int(solute_index)
-                    d = Dependancy.Dependancy(parent = self.kinetics[row], type = type, param = param, row = col+2, muMax=self.mu_max_list[row])
-                    self.dependancy_matrix[row][col] = d
+                else:
+                    param = ''
+
+                row = int(particulate_index)
+                col = int(solute_index)
+
+                d = Dependancy.Dependancy(parent = self.kinetics[row], type = type, param = param, row = col+2, muMax=self.mu_max_list[row])
+                self.dependancy_matrix[row][col] = d
+
+                if type.lower() != 'none':
                     d.gridEntry()
 
         self.update_kinetics_dependancy_matrix_reference()
@@ -177,7 +178,7 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
 
     def get_mu_max_string(self): 
         # This function will take the 'muMax' value for all of the particulates and put it in a comma-separated string, to be put in the save file
-        mu_max_string = '       #, '
+        mu_max_string = '       \t#, '
         for k in self.kinetics:
             mu_max_string += k.get_mu_max()
             mu_max_string += ', '
@@ -195,10 +196,10 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
         #this 'comment' will contain the information of each dependancy, and this will be placed in the save file as a comment,
         # so Biofilm.jl will ignore it. This information will be used during the file loading process to populate the kinetics
         # fields. This is a workaround so that I don't have to parse the 'mu' string described in the comment at the top of this function.
-        comment = '     #===Kinetics===#\n'
+        comment = '       \t#===Kinetics===#\n'
         comment += self.get_mu_max_string()
         row_index = 0
-        print(self.dependancy_matrix.shape)
+        #print(self.dependancy_matrix.shape)
 
         if self.dependancy_matrix.ndim == 1:
             self.dependancy_matrix = self.dependancy_matrix.reshape(1, -1)
@@ -220,7 +221,6 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
                 if type.strip() == "monod":
                     non_zero_dependancy_present = True
 
-                    print('monod')
                     string += "( S[{}] / ({} + S[{}]) )"
                     string = string.format(str(solute_index), str(param), str(solute_index))
 
@@ -233,7 +233,6 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
                 elif type.strip() == "inhibition":
                     non_zero_dependancy_present = True
 
-                    print('inhibition')
                     string += "( 1 / (1 + (S[{}] / {})) )"
                     string = string.format(str(solute_index), param)
 
@@ -244,7 +243,7 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
                     string += ' * '
                 
                 else:
-                    next_comment_line = '       #, none, {}, {}\n'
+                    next_comment_line = '\t\t#, none, {}, {}\n'
                     comment += next_comment_line.format(str(row_index), str(solute_index))
 
                 # add +1 to index
@@ -258,14 +257,9 @@ class ReactionFrame(customtkinter.CTkScrollableFrame):
 
             kinetics_arr.append(string)
             row_index += 1
-        comment += '        #===End_Kinetics===#\n'
-        print(kinetics_arr)
+        comment += '       \t#===End_Kinetics===#\n'
         return kinetics_arr, comment
-
-
-    #TODO: - make it so reactionFrame takes in info on dependancies
-    # - call reactionFrame with empty dependancies by default
-    # - call reactionFrame with appropriate info in FileLoader.
+    
             
 
 

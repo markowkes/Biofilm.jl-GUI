@@ -1,10 +1,29 @@
 
 class SaveFileBuilder():
-    def __init__(self, params, particulates, solutes, kinetics):
+    def __init__(self, params, particulates, solutes, sin, kinetics):
         self.params = params
         self.particulates_arr = particulates
         self.solutes_arr = solutes
+        self.sin = sin
         self.kinetics = kinetics
+
+
+        #This is the main function which is called from main
+    def makeSaveFileContent(self):
+        content = "using Biofilm \n \n #input parameters \n"
+
+        content = content + self.getSimulationParams()
+        content = content + self.getParticulateParams()
+        content = content + self.getSoluteParams()
+        content = content + self.getTankParams()
+        content = content + self.getBiofilmParams()
+
+        content = content + """\t\tsavePlots = true,
+        \tmakePlots = true,"""
+        content = content +        """)\n\n\t\tt,zm,Xt,St,Pb,Sb,Lf,sol = BiofilmSolver(p) # Run solver
+            biofilm_plot(sol,p) # Plot final results
+            #biofilm_sol2csv(sol,p,filname)"""
+        return content
 
 
     def getParticulateObjectParams(self, object_arr):
@@ -48,23 +67,6 @@ class SaveFileBuilder():
             return name_string
 
 
-    def makeSaveFileContent(self):
-        content = "using Biofilm \n \n #input parameters \n"
-
-        content = content + self.getSimulationParams()
-        content = content + self.getParticulateParams()
-        content = content + self.getSoluteParams()
-        content = content + self.getTankParams()
-        content = content + self.getBiofilmParams()
-
-        content = content + """savePlots = true,
-                               makePlots = true,"""
-        content = content +        """)\n\tt,zm,Xt,St,Pb,Sb,Lf,sol = BiofilmSolver(p) # Run solver
-        biofilm_plot(sol,p) # Plot final results
-        #biofilm_sol2csv(sol,p,filname)"""
-        return content
-
-
     def getSimulationParams(self):
         content =  """p = (
             # --------------------- #
@@ -92,35 +94,65 @@ class SaveFileBuilder():
     def buildSrcX(self): #TODO: this is just a placeholder
         content = ""
         for particulate in self.particulates_arr:
-            content = content + "(S,X,Lf,t,z,p) -> 0.0\n\t\t\t   "
+            content = content + "(S,X,Lf,t,z,p) -> 0.0,\n\t\t\t   "
+
+        content = content.rstrip() #trim off trailing tabs (\t characters)
+        content = content[:-1] #trim off trailing comma
         return content
     
 
     def buildSrcS(self): #TODO: this is just a placeholder
         content = ""
         for particulate in self.solutes_arr:
-            content = content + "(S,X,Lf,t,z,p) -> 0.0\n\t\t\t   "
+            content = content + "(S,X,Lf,t,z,p) -> 0.0,\n\t\t\t   "
+        
+        content = content.rstrip() #trim off trailing tabs (\t characters)
+        content = content[:-1] #trim off trailing comma
         return content         
 
-#NEXT STEP: DEBUG buildMU FUNCTION. particulate on line 110 is just 0... see emulatingCase4.jl lines 26,27
 
     def buildMu(self):
         kinetics, comment = self.kinetics # this is a np array of strings. length = #of particulates
         content = ""
         particulate_index = 0
         for particulate in kinetics:
-            content += "\n\t\t\t(S,X,Lf,t,z,p) ->"
+            if particulate_index > 0:
+                content += '\t\t\t'
+            content += "(S,X,Lf,t,z,p) ->"
             content += particulate
-            content += ",  #" + self.particulates_arr[particulate_index].getName()
+            if particulate_index <= len(kinetics):
+                content += ','
+            content += "  #" + self.particulates_arr[particulate_index].getName() + '\n'
             particulate_index +=1
-        return content + '\n' + comment + '\n'
+
+        content = content.rstrip() #trim off trailing tabs (\t characters)
+        return content + '\n\t\t],\n\n' + comment
 
 
-    def buildSin(self): #TODO: fill in Sin with 'inflow' equation
+    def buildSin(self): 
         content = ""
-        for particulate in self.solutes_arr:
-            content = content + "(t) -> 100\n\t\t\t   "
-        content = content.rstrip()
+        for params in self.sin:
+            temp = "(t) -> {},\n\t\t\t   "
+
+            if params is None:
+                content += temp.format('0')
+
+            elif params[0] == 'constant':
+                content += temp.format(params[1])
+
+            elif params[0] == 'periodic':
+                periodic = '{} * (1 - heaviside( mod((t - {}), {}) - {}))'
+                periodic = periodic.format(str(params[1]), str(params[4]), str(params[2]), str(params[3]))
+                content += temp.format(periodic)
+
+            elif params[0] == 'sin':
+                sin = '{} + ({} * sin(t/{}))'
+                sin = sin.format(str(params[3]), str(params[1]), str(params[2]))
+                content += temp.format(sin)
+            
+
+        content = content.rstrip() #trim off trailing tabs (\t characters)
+        content = content[:-1] #trim off trailing comma
         return content
     
 
@@ -137,7 +169,7 @@ class SaveFileBuilder():
             rho =   [{}],\t\t# Particulate densities
             Kdet =  20000.0,\t\t# Particulates detachment coefficient
             srcX =  [{}],\t\t# Source of particulates
-            mu = [{}],\n"""
+            mu = [{}"""
         content = content + particulate_param_string.format(self.buildStringParams(particulate_params[0]), self.buildFloatParams(particulate_params[1]), self.buildFloatParams(particulate_params[2]), self.buildFloatParams(particulate_params[3]), self.buildSrcX(), self.buildMu())
         return content
 
@@ -149,7 +181,7 @@ class SaveFileBuilder():
             # ----------------- #\n"""
         solute_params = self.getSoluteObjectParams(self.solutes_arr)
         solute_param_string = """
-            SNames =[{}],\t\t# Solute names
+            SNames =[{}],\t# Solute names
             Sin =   [{}],\t\t# Solute inflow (can be function of time)
             Sto =   [{}],\t\t# Tank solute concentration initial condition(s)
             Sbo =   [{}],\t\t# Biofilm solutes concentration initial condition(s)
@@ -158,7 +190,24 @@ class SaveFileBuilder():
             Db =    [{}],\t\t# Effective solute diffusion through biofilm
             srcS =  [{}],     # Source of solutes\n"""   
         content = content + solute_param_string.format(self.buildStringParams(solute_params[0]), self.buildSin(), self.buildFloatParams(solute_params[1]), self.buildFloatParams(solute_params[2]), self.buildYxs(self.params["yield_coefficients"]), self.buildFloatParams(solute_params[3]), self.buildFloatParams(solute_params[4]), self.buildSrcS())
+        content = content + self.build_sin_comment()
         return content
+    
+
+    def build_sin_comment(self):
+        comment = '\n\t\t#===Sin===#\n'
+
+        for solute in self.sin:
+            if solute is None:
+                line = '#, none'
+
+            else:
+                line = '#, ' + ', '.join(map(str, solute))
+
+            comment += '\t\t' + line + '\n'
+
+        comment += '\t\t#===End_Sin===#\n'
+        return comment
 
 
     def getTankParams(self):
@@ -168,7 +217,7 @@ class SaveFileBuilder():
             # --------------- #\n"""
         tank_param_string = """\t\t V =\t{},\t#Volume of tank[m^3]
         \t A =\t{},\t#Surface area of biofilm [m^2]
-        \t Q =\t{},\t#Flowrate through tank [m^3/d]\n"""
+        \t Q =\t{},\t#Flowrate through tank [m^3/d]\n\n"""
         content = content + tank_param_string.format(self.params["volume"].get(), self.params["surface_area"].get(), self.params["flowrate"].get(), self.params["gridpoints"].get(), self.params["initial_thickness"].get(), self.params["layer_thickness"].get())
         return content
         

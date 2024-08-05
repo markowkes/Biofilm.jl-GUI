@@ -48,6 +48,7 @@ class Dependancy():
 
     def destroy(self):
         self.entry.destroy()
+        self.optionmenu.grid_forget()
         self.optionmenu.destroy()
         self.spacer.destroy()
         del self

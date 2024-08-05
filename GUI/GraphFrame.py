@@ -14,7 +14,7 @@ class GraphFrame(customtkinter.CTkFrame):
         self.type = ''
 
 
-    def getParams(self):
+    def get_params(self):
         list = []
         if self.type == 'constant':
             list.append('constant')
@@ -67,7 +67,9 @@ class GraphFrame(customtkinter.CTkFrame):
         y_entry.grid(row = 1, column = 9)
         y_entry.insert(0, 1.0)
         y_entry.bind('<Return>', command = lambda event: self.updateConstY(y_entry.get()))
+        y_entry.bind('<FocusOut>', command = lambda event: self.updateConstY(y_entry.get()))
 
+        self.con_y = 1.0
         self.con_canvas.draw()
         self.update()
 
@@ -124,6 +126,7 @@ class GraphFrame(customtkinter.CTkFrame):
         amp_entry.grid(row = 1, column = 9)
         amp_entry.insert(0, 1.0)
         amp_entry.bind('<Return>', command = lambda event: self.updatePerAmplitude(amp_entry.get()))
+        amp_entry.bind('<FocusOut>', command = lambda event: self.updatePerAmplitude(amp_entry.get()))
 
         period_label = customtkinter.CTkLabel(master = self.graph_frame, text = "period").grid(row = 2, column = 8)
         period_entry = customtkinter.CTkEntry(master = self.graph_frame)
@@ -147,7 +150,7 @@ class GraphFrame(customtkinter.CTkFrame):
         self.per_period = float(period_entry.get())
         self.per_duration = float(duration_entry.get())
         self.per_tstart = float(tstart_entry.get())
-        #self.params.get("per_ax").plot(self.params.get("time"), 0 if self.params.get("time") < self.params.get("per_tstart") else self.params.get("amplitude")(1 - np.heaviside(((self.params.get("time") - self.params.get("per_tstart")) % self.params.get("period")) - self.params.get("duration")), 0.5))
+    
         self.per_ax.plot(self.time, self.heavy())
         
         self.per_canvas.draw()
@@ -241,6 +244,28 @@ class GraphFrame(customtkinter.CTkFrame):
         self.con_canvas = FigureCanvasTkAgg(con_fig, master = self.graph_frame)
         
 
-    #draw(self)
+    def exit(self):
+        plt.close()
 
 
+    def load_inflow(self, inflow):
+        comma_separated_values = inflow.split(', ')
+        if len(comma_separated_values) <= 2: #filter out 'none' inflows
+            return
+
+        if comma_separated_values[1] == 'constant':
+            self.constant()
+            self.updateConstY(int(comma_separated_values[2]))
+
+        elif comma_separated_values[1] == 'periodic':
+            self.periodic()
+            self.updatePerAmplitude(comma_separated_values[2])
+            self.updatePerPeriod(comma_separated_values[3])
+            self.updatePerDuration(comma_separated_values[4])
+            self.updatePerTStart(comma_separated_values[5])     
+
+        elif comma_separated_values[1] == 'sin':
+            self.sin()
+            self.updateSinAmplitude(comma_separated_values[2])
+            self.updateSinPeriod(comma_separated_values[3])
+            self.updateSinYOffset(comma_separated_values[4])
