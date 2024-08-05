@@ -9,6 +9,7 @@ import ParticulateObjectFrame
 class ScrollableObjectFrame(customtkinter.CTkScrollableFrame): 
     def __init__(self, params, master, frame_list, is_solute, **kwargs):
         super().__init__(master, **kwargs)
+        self.master = master
         self.params = params
         self.is_solute = is_solute
         self.frame_list = frame_list
@@ -99,4 +100,25 @@ class ScrollableObjectFrame(customtkinter.CTkScrollableFrame):
     def loadFrames(self, frame_list):
         self.frame_list = frame_list
         self.drawFrames()
+
+
+    def load_inflow(self, inflow_list):
+        inflow_list = inflow_list[1:-1]
+        for i, inflow in enumerate(inflow_list):
+            self.frame_list[i].load_graph_frame(inflow)
+
+
+    def get_inflow_params(self):
+        if not self.is_solute:
+            return None
         
+        inflow_params = []
+        for solute in self.frame_list:
+            inflow_params.append(solute.get_inflow_params())
+        
+        return inflow_params
+    
+
+    def exit(self):
+        for solute in self.frame_list:
+            solute.exit()

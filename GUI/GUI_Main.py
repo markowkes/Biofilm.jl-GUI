@@ -26,10 +26,7 @@ import Dependancy
 
 #TODO:
 '''
-Next step: precompile julia on seperate thread
-
  For 1.0 release:
-kinetics are not loaded from file
 load Sin from file
 
 Build a distributable package 
@@ -47,9 +44,10 @@ Test distributable across operating systems and screens
 
 #BUGS: 
 '''
- To be fixed before next release:
+Deleting a solute when no particulates have been made causes error
 must open reactions menu before using 'save as' button
 scrolling on soluteSOF not working?
+closing window after adding solute inflow prints errors, python terminal needs to be killed. This is a bug in customtkinter.
 '''
 
 class BiofilmApp(customtkinter.CTk):
@@ -65,7 +63,16 @@ class BiofilmApp(customtkinter.CTk):
         self.appFrame.pack() #because the menu bar, which holds the 'file' button ect. uses the 'pack' placement method, a frame for the whole app must also be packed if the 'grid' placement method is to be used.
         self.create_parameter_frame()
         self.create_frames()
+
+        self.protocol("WM_DELETE_WINDOW", self.exit)
+
         self.mainloop()
+
+
+    def exit(self):
+        print("TEST")
+        self.SoluteSOF.exit()
+        self.destroy()
 
 
     def set_up_window(self):
@@ -89,12 +96,12 @@ class BiofilmApp(customtkinter.CTk):
             "tolerance": customtkinter.StringVar(value="1e-4"),
             "output_period": customtkinter.StringVar(value="0.1"),
             "kdet": customtkinter.StringVar(value="100"),
-            "volume": customtkinter.StringVar(value="0"),
-            "surface_area": customtkinter.StringVar(value="0"),
-            "flowrate": customtkinter.StringVar(value="0"),
-            "gridpoints": customtkinter.StringVar(value="10"),
+            "volume": customtkinter.StringVar(value="1"),
+            "surface_area": customtkinter.StringVar(value="1"),
+            "flowrate": customtkinter.StringVar(value="1"),
+            "gridpoints": customtkinter.StringVar(value="40"),
             "initial_thickness": customtkinter.StringVar(value="0.1"),
-            "layer_thickness": customtkinter.StringVar(value="0.1"),
+            "layer_thickness": customtkinter.StringVar(value="10e-4"),
             "yield_coefficients": np.empty(0), #will hold an np array where rows represent particulates, columns represent solutes. data type is float.
             "file_path": ""     #Note, because file_path will never be used with an entryBox, it is just a string
         }
@@ -168,7 +175,8 @@ class BiofilmApp(customtkinter.CTk):
 
     def save_as(self):
         kinetics = self.reactionSF.getKinetics()
-        SFB = SaveFileBuilder.SaveFileBuilder(self.params, self.particulates_arr, self.solutes_arr, kinetics)
+        sin = self.SoluteSOF.get_inflow_params()
+        SFB = SaveFileBuilder.SaveFileBuilder(self.params, self.particulates_arr, self.solutes_arr, sin, kinetics)
         content = SFB.makeSaveFileContent()
         fc = FileController.FileController()
         file_path = fc.saveAs(content)
@@ -180,13 +188,14 @@ class BiofilmApp(customtkinter.CTk):
             self.save_as()
             return
         kinetics = self.reactionSF.getKinetics()
-        SFB = SaveFileBuilder.SaveFileBuilder(self.params, self.particulates_arr, self.solutes_arr, kinetics)
+        sin = self.SoluteSOF.get_inflow_params()
+        SFB = SaveFileBuilder.SaveFileBuilder(self.params, self.particulates_arr, self.solutes_arr, sin, kinetics)
         content = SFB.makeSaveFileContent()
         fc = FileController.FileController()
         fc.save(content, self.params['file_path'])
 
 
-    def load(self):
+    def load(self): #i.e 'open'
         fc = FileController.FileController()
         #invoke load method on fileController, this uses filedialog to open the window where the user selects file to load
         #this method returns the file path of the selected load file and a string 'file_contents' which is the whole file in one sring
@@ -198,7 +207,7 @@ class BiofilmApp(customtkinter.CTk):
             #make new FileLoader object, passing in file contents string. 
             fl = FileLoader.FileLoader(file_contents)
             #This function loads the file's params into self.params, and makes the solute/partuculate objects and the yxs matrix
-            solutes, particulates, yxs, dependancy_string = fl.saveDataToStructures(self.params, self.SoluteSOF, self.particulateSOF, self.reactionSF)
+            solutes, particulates, yxs, dependancy_string, sin_string = fl.saveDataToStructures(self.params, self.SoluteSOF, self.particulateSOF, self.reactionSF)
             self.solutes_arr = solutes
             self.SoluteSOF.loadFrames(solutes)
             self.particulates_arr = particulates
@@ -207,6 +216,12 @@ class BiofilmApp(customtkinter.CTk):
             self.dependancy_string = dependancy_string
             self.init_reaction_frame()
 
+            #update the reaction frame reference on the solute and particuate frames
+            self.particulateSOF.add_reaction_frame_reference(self.reactionSF)
+            self.SoluteSOF.add_reaction_frame_reference(self.reactionSF)
+
+            self.SoluteSOF.load_inflow(sin_string)
+            
 
     def clearParameterFrame(self):
         self.simulation_frame.grid_forget()
@@ -411,11 +426,11 @@ class BiofilmApp(customtkinter.CTk):
 
         # Now 'output' contains the entire stdout of the subprocess
         return process.returncode, output
-       
-
-    def quitting(self, event):
-        print('quitting')
-        customtkinter.CTk.quit(self)
+          
 
 app = BiofilmApp()
 app.mainloop()
+
+
+
+

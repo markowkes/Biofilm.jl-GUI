@@ -51,28 +51,27 @@ class FileLoader():
         substring = self.file_content[start:end]
         # split into list of lines
         dependancy_strings = substring.splitlines()
-        '''
-        for line in lines:
-            #each line represents a kinetic (dependancy). is of the format: type (monod/inhibition), particulate_index, solute_index, Ki/Km OR 'none', particulate_index, solute_index
-            comma_separated_values = line.split(', ')
 
-            #the first line will be a list of mu maxs, as stringVars, and the first item in the string will just be a '#' so Julia doesn't read it.
-            if mu_max_list == None:
-                mu_max_list = [customtkinter.StringVar(value = item) for item in comma_separated_values[1:]]
-                continue #skip to next loop iteration
-
-            type = comma_separated_values[1]
-            particulate_index = comma_separated_values[2]
-            solute_index = comma_separated_values[3]
-
-            if type.lower() == 'none':
-                dependancy_matrix[particulate_index][solute_index] = Dependancy.Dependancy(parent=reaction_frame, type = type, param = customtkinter.StringVar(), row = particulate_index, muMax=mu_max_list[particulate_index])
-            else:
-                param = comma_separated_values[4]
-                dependancy_matrix[particulate_index][solute_index] = Dependancy.Dependancy(parent=reaction_frame, type = type, param = customtkinter.StringVar(value=param), row = particulate_index, muMax=mu_max_list[particulate_index])
-        '''
         return dependancy_strings
 
+
+    def parse_sin_comment(self):
+        start = self.file_content.find("===Sin===", 1500)
+        if start == -1:
+            print("note: cannot find '===Sin===' comment in save file.")
+            return
+
+        end = self.file_content.find("===End_Sin===", start)
+        if end == -1:
+            print("note: cannot find '===End_Sin===' comment in save file.")
+            return
+        
+        # get a substring which is only the sin comment
+        substring = self.file_content[start:end]
+        # split into list of lines
+        sin_string = substring.splitlines()
+
+        return sin_string
 
 
     def saveDataToStructures(self, params, solutes_scrollable_object_frame, particulates_scrollable_object_frame, reaction_frame):
@@ -137,8 +136,7 @@ class FileLoader():
                             "sto": customtkinter.StringVar(value = Sto[solute_index]),
                             "sbo": customtkinter.StringVar(value = Sbo[solute_index]),
                             "dt": customtkinter.StringVar(value = Dt[solute_index]),
-                            "db": customtkinter.StringVar(value = Db[solute_index]),
-                            "Sin": edited_Sin[solute_index]}
+                            "db": customtkinter.StringVar(value = Db[solute_index])}
             new_frame = SoluteObjectFrame.ObjectFrame(solutes_scrollable_object_frame, frame_params, solute_index) 
             solute_objects.append(new_frame)
 
@@ -153,8 +151,9 @@ class FileLoader():
             particulate_objects.append(new_frame)
 
         dependancy_string = self.parse_kinetics_comment(solute_count=col_count, particulate_count=row_count, reaction_frame=reaction_frame)
+        sin_string  = self.parse_sin_comment()
 
-        return solute_objects, particulate_objects, Yxs, dependancy_string
+        return solute_objects, particulate_objects, Yxs, dependancy_string, sin_string
 
 
     

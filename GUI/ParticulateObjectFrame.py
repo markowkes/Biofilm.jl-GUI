@@ -17,19 +17,19 @@ class ObjectFrame(customtkinter.CTkFrame):
         self.initButtons()
 
     def initLabels(self):
-        name_label = customtkinter.CTkLabel(master=self, text = "name").grid(row = 0, column = 0, sticky = "w", padx = 6, columnspan = 3)
+        name_label = customtkinter.CTkLabel(master=self, text = "Name").grid(row = 0, column = 0, sticky = "w", padx = 6, columnspan = 3)
         name_entry = customtkinter.CTkEntry(master = self, textvariable= self.params["name"])
         name_entry.grid(row = 0, column = 3, pady = 9)
                         
-        Pbo_label = customtkinter.CTkLabel(master=self, text = "volume fraction initial condition").grid(row = 1, column = 0, sticky = "w", padx = 6, columnspan = 3) 
+        Pbo_label = customtkinter.CTkLabel(master=self, text = "Volume Fraction Initial Condition").grid(row = 1, column = 0, sticky = "w", padx = 6, columnspan = 3) 
         Pbo_entry = customtkinter.CTkEntry(master = self, textvariable= self.params["pbo"])
         Pbo_entry.grid(row = 1, column = 3, pady = 9)
 
-        Sbo_label = customtkinter.CTkLabel(master=self, text = "density").grid(row = 2, column = 0, sticky = "w", padx = 6, columnspan = 3) 
+        Sbo_label = customtkinter.CTkLabel(master=self, text = "Density (g/m³)").grid(row = 2, column = 0, sticky = "w", padx = 6, columnspan = 3) 
         Sbo_entry = customtkinter.CTkEntry(master = self, textvariable= self.params["rho"])
         Sbo_entry.grid(row = 2, column = 3, pady = 9)
 
-        Xto_label = customtkinter.CTkLabel(master=self, text = "initial concentration").grid(row = 3, column = 0, sticky = "w", padx = 6, columnspan = 3) 
+        Xto_label = customtkinter.CTkLabel(master=self, text = "initial concentration (g/m³)").grid(row = 3, column = 0, sticky = "w", padx = 6, columnspan = 3) 
         Xto_entry = customtkinter.CTkEntry(master = self, textvariable= self.params["xto"])
         Xto_entry.grid(row = 3, column = 3, pady = 9)
 
